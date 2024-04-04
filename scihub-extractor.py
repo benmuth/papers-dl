@@ -84,20 +84,20 @@ def download_from_identifier(
     else:
         print(f"Successfully downloaded file with identifier {identifier}")
 
-    result_path = os.path.join(out, result['name'])
+    result_path = os.path.join(out, result["name"])
 
     try:
         result_info = pdf2doi.pdf2doi(result_path)
-        validation_info = json.loads(result_info['validation_info'])
+        validation_info = json.loads(result_info["validation_info"])
     except TypeError:
         print("Invalid JSON!")
         return
 
-    title = validation_info.get('title')
-    
+    title = validation_info.get("title")
+
     file_name = title if title else name
     if file_name:
-        file_name += '.pdf'
+        file_name += ".pdf"
         new_path = os.path.join(out, file_name)
         os.rename(result_path, new_path)
         print(f"File downloaded to {new_path}")
