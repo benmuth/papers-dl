@@ -78,6 +78,9 @@ def download_from_identifier(
     identifier: str, out: str, sh: SciHub, name: str | None = None
 ):
     result = sh.download(identifier, out)
+    if not result:
+        return
+
     if "err" in result:  # this is the API that scihub.py uses for errors
         print(f"{result['err']}")
         return

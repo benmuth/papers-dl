@@ -170,6 +170,7 @@ class SciHub(object):
             # and requests doesn't know how to download them.
             # as a hacky fix, you can add them to your store
             # and verifying would work. will fix this later.
+            # NOTE(ben): see this SO answer: https://stackoverflow.com/questions/27068163/python-requests-not-handling-missing-intermediate-certificate-only-from-one-mach
             res = self.sess.get(url, verify=False)
 
             if res.headers["Content-Type"] != "application/pdf":
