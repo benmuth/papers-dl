@@ -78,11 +78,20 @@ class SciHub(object):
         """
         Finds available scihub urls via https://sci-hub.now.sh/
         """
+
+        # NOTE: This misses some valid URLs. Alternatively, we could parse
+        # the HTML more finely by navigating the parsed DOM, instead of relying
+        # on filtering. That might be more brittle in case the HTML changes.
+        # Generally, we don't need to get all URLs.
+        scihub_domain = re.compile(r"^http[s]*://sci.hub", flags=re.IGNORECASE)
         urls = []
         res = requests.get("https://sci-hub.now.sh/")
         s = self._get_soup(res.content)
-        for a in s.find_all("a", href=True):
-            if "sci-hub." in a["href"]:
+        text_matches = s.find_all("a", href=True, string=re.compile(scihub_domain))
+        href_matches = s.find_all("a", re.compile(scihub_domain), href=True)
+        full_match_set = set(text_matches) | set(href_matches)
+        for a in full_match_set:
+            if "sci" in a or "sci" in a["href"]:
                 urls.append(a["href"])
         return urls
 
