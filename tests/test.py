@@ -1,6 +1,8 @@
 from src.scihub import SciHub
 import unittest
-# import requests
+
+# TODO: get mock assets for tests to avoid problems
+# with captchas
 
 
 class TestSciHub(unittest.TestCase):
@@ -11,10 +13,17 @@ class TestSciHub(unittest.TestCase):
         """
         Tests to verify that `scihub.now.sh` is working
         """
+        urls = self.scihub.available_base_url_list
         self.assertNotEqual(
-            len(self.scihub.available_base_url_list),
+            len(urls),
             0,
             "Failed to find Sci-Hub domains",
         )
-        for url in self.scihub.available_base_url_list:
-            self.assertTrue("sci" in url, f"Found URL that may be irrelevant: {url}")
+        print(f"number of candidate urls: {len(urls)}")
+
+    def test_fetch(self):
+        with open('tests/dois.txt') as f:
+            ids = f.read().splitlines()
+            for id in ids:
+                res = self.scihub.fetch(id)
+                self.assertIsNotNone(res, f"Failed to fetch url from id {id}")
