@@ -63,7 +63,7 @@ class CaptchaNeededError(SiteAccessError):
 
 class SciHub(object):
     """
-    SciHub class can search for papers on Google Scholars
+    SciHub class can search for papers on Google Scholar
     and fetch/download papers from sci-hub.io
     """
 

@@ -1,3 +1,6 @@
+# Overview
+`sci-dl` is a command line application for downloading scientific papers.
+
 ## Usage
 
 `python scihub-extractor.py -d <DOI|URL> -o <output directory>`
@@ -13,4 +16,4 @@ It should either
 
 In the second case, we can probably be smarter about only downloading the DOIs intended (based on title or something?), but it's pretty dumb right now.
 
-This project includes a slightly modified version of [scihub.py](https://github.com/zaytoun/scihub.py).
+This project includes a modified version of [scihub.py](https://github.com/zaytoun/scihub.py).
