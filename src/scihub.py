@@ -198,7 +198,7 @@ class SciHub(object):
             # as a hacky fix, you can add them to your store
             # and verifying would work. will fix this later.
             # NOTE(ben): see this SO answer: https://stackoverflow.com/questions/27068163/python-requests-not-handling-missing-intermediate-certificate-only-from-one-mach
-            res = self.sess.get(url, verify=False)
+            res = self.sess.get(url, verify=True)
 
             if res.headers["Content-Type"] != "application/pdf":
                 logger.info(
@@ -248,7 +248,7 @@ class SciHub(object):
         """
 
         while True:
-            res = self.sess.get(self.base_url + identifier, verify=False)
+            res = self.sess.get(self.base_url + identifier, verify=True)
             s = self._get_soup(res.content)
             iframe = s.find("iframe")
 
