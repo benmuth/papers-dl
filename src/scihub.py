@@ -13,6 +13,7 @@ Sci-API Unofficial API
 @author zaytoun
 """
 
+from collections.abc import MutableMapping
 import re
 import argparse
 import hashlib
@@ -24,6 +25,8 @@ import urllib3
 from bs4 import BeautifulSoup
 from retrying import retry
 
+import enum
+
 # log config
 logging.basicConfig()
 logger = logging.getLogger("Sci-Hub")
@@ -32,9 +35,16 @@ logger.setLevel(logging.DEBUG)
 #
 urllib3.disable_warnings()
 
+
+# URL-DIRECT - openly accessible paper
+# URL-NON-DIRECT - pay-walled paper
+# PMID - PubMed ID
+# DOI - digital object identifier
+IDClass = enum.Enum("identifier", ["URL-DIRECT", "URL-NON-DIRECT", "PMD", "DOI"])
+
 # constants
 SCHOLARS_BASE_URL = "https://scholar.google.com/scholar"
-HEADERS = {
+HEADERS: MutableMapping = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15"
 }
 
@@ -162,13 +172,13 @@ class SciHub(object):
             )
         return data
 
-    def fetch(self, identifier):
+    def fetch(self, identifier) -> dict[str, bytes | str] | None:
         """
         Fetches the paper by first retrieving the direct link to the pdf.
         If the indentifier is a DOI, PMID, or URL pay-wall, then use Sci-Hub
         to access and download paper. Otherwise, just download paper directly.
         """
-
+        url = None
         try:
             url = self._get_direct_url(identifier)
             if not url:
@@ -211,7 +221,7 @@ class SciHub(object):
             )
             return None
 
-    def _get_direct_url(self, identifier):
+    def _get_direct_url(self, identifier: str) -> str | None:
         """
         Finds the direct source url for a given identifier.
         """
@@ -223,7 +233,7 @@ class SciHub(object):
             else self._search_direct_url(identifier)
         )
 
-    def _search_direct_url(self, identifier):
+    def _search_direct_url(self, identifier) -> str | None:
         """
         Sci-Hub embeds papers in an iframe. This function finds the actual
         source url which looks something like https://moscow.sci-hub.io/.../....pdf.
@@ -249,7 +259,7 @@ class SciHub(object):
             else:
                 self._change_base_url()
 
-    def _classify(self, identifier):
+    def _classify(self, identifier) -> IDClass:
         """
         Classify the type of identifier:
         url-direct - openly accessible paper

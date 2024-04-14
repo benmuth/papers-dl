@@ -42,7 +42,6 @@ def download_url(url: str, timeout: int = 10) -> str:
     if encoding is not None:
         response.encoding = encoding
 
-    print(response.text)
     return response.text
 
 
