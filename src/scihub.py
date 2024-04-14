@@ -227,23 +227,16 @@ class SciHub(object):
         """
         id_type = self._classify(identifier)
 
-        return (
-            identifier
-            if id_type == "url-direct"
-            else self._search_direct_url(identifier)
-        )
+        if id_type == IDClass["URL-DIRECT"]:
+            return identifier
+        else:
+            return self._search_direct_url(identifier)
 
     def _search_direct_url(self, identifier) -> str | None:
         """
         Sci-Hub embeds papers in an iframe. This function finds the actual
         source url which looks something like https://moscow.sci-hub.io/.../....pdf.
         """
-        # res = self.sess.get(self.base_url + identifier, verify=False)
-        # s = self._get_soup(res.content)
-        # iframe = s.find('iframe')
-        # if iframe:
-        #     return iframe.get('src') if not iframe.get('src').startswith('//') \
-        #         else 'http:' + iframe.get('src')
 
         while True:
             res = self.sess.get(self.base_url + identifier, verify=False)
@@ -251,11 +244,14 @@ class SciHub(object):
             iframe = s.find("iframe")
 
             if iframe:
-                return (
-                    iframe.get("src")
-                    if not iframe.get("src").startswith("//")
-                    else "http:" + iframe.get("src")
-                )
+                src = iframe.get("src")
+                if isinstance(src, list):
+                    src = src[0]
+                if src.startswith("//"):
+                    return "http:" + src
+                else:
+                    return src
+
             else:
                 self._change_base_url()
 
