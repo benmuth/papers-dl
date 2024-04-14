@@ -81,11 +81,7 @@ def download_from_identifier(
     if not result:
         return
 
-    if "err" in result:  # this is the API that scihub.py uses for errors
-        print(f"{result['err']}")
-        return
-    else:
-        print(f"Successfully downloaded file with identifier {identifier}")
+    print(f"Successfully downloaded file with identifier {identifier}")
 
     result_path = os.path.join(out, result["name"])
 
@@ -129,7 +125,6 @@ def save_scihub(identifier: str, out: str):
     elif ".pdf" in identifier:
         # pdf2doi can also take directories of pdfs, which will return a list of
         # dicts, but we're not handling that case here yet
-        # TODO: look at error cases
         result = pdf2doi.pdf2doi(identifier)
         print(result["identifier"])
 
