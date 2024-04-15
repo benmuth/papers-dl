@@ -1,13 +1,13 @@
 # Overview
-`sci-dl` is a command line application for downloading scientific papers.
+`papers-dl` is a command line application for downloading scientific papers.
 
 ## Usage
 
-`python scihub-extractor.py -d <DOI|URL> -o <output directory>`
+`python papers-dl.py -d <DOI|URL> -o <output directory>`
 
 or
 
-`python scihub-extractor.py -f <text file with newline separated DOIs|URLs> -o <output directory>`
+`python papers-dl.py -f <text file with newline separated DOIs|URLs> -o <output directory>`
 
 It should either
 
