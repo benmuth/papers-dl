@@ -16,6 +16,33 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+dependencies = [
+  beautifulsoup4,
+  bs4,
+  certifi,
+  cffi,
+  charset-normalizer,
+  cryptography,
+  easygui,
+  feedparser,
+  google,
+  idna,
+  pdf2doi,
+  pdfminer.six,
+  pdftitle,
+  pycparser,
+  PyMuPDF,
+  PyMuPDFb,
+  PyPDF2,
+  pyperclip,
+  requests,
+  retrying,
+  sgmllib3k,
+  six,
+  soupsieve,
+  urllib3,
+  w3lib,
+]
 
 [project.urls]
 Homepage = "https://github.com/benmuth/papers-dl"
