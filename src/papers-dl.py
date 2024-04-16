@@ -6,6 +6,7 @@ import requests
 from w3lib.encoding import html_body_declared_encoding, http_content_type_encoding
 
 from scihub import IdentifierNotFoundError, SciHub
+from parse import parse_file
 import pdf2doi
 import json
 
@@ -21,6 +22,7 @@ DOI_REGEXES = (
     re.compile(r"10.1207/[\w\d]+\&\d+_\d+", re.IGNORECASE),
 )
 
+recognized_identifiers = ["doi", "pmid", "url"]
 
 # yoinked from archivebox/util.py
 def download_url(url: str, timeout: int = 10) -> str:
@@ -144,41 +146,56 @@ def save_scihub(identifier: str, out: str):
 
 
 def main():
-    # Some cli arguments from scihub.py
     parser = argparse.ArgumentParser(
-        description="SciHub - To remove all barriers in the way of science."
+        description="Download scientific papers from the command line"
     )
-    parser.add_argument(
-        "-d",
-        "--download",
+
+    subparsers = parser.add_subparsers()
+
+    # FETCH
+    parser_fetch = subparsers.add_parser("fetch", help="try to download a paper from the given query")
+
+    parser_fetch.add_argument(
+        "query",
         metavar="(DOI|PMID|URL)",
-        help="tries to find and download the paper with the given identifier",
         type=str,
+        help="the identifier to try to download"
     )
-    parser.add_argument(
-        "-f",
-        "--file",
-        metavar="path",
-        help="pass file with list of newline separated identifiers and download each",
-        type=str,
-    )
-    parser.add_argument(
+
+    parser_fetch.add_argument(
         "-o",
         "--output",
         metavar="path",
         help="optional output directory for downloaded papers",
-        default="",
+        default=".",
         type=str,
     )
+
+    parser_fetch.set_defaults(func= lambda args: save_scihub(args.query, args.output))
+
+    # PARSE
+    parser_parse = subparsers.add_parser("parse", help="parse identifiers from a file")
+    parser_parse.add_argument(
+        "-m",
+        "--match",
+        metavar="type",
+        help="the type of identifier to match",
+        default="doi",
+        type=str,
+        choices=recognized_identifiers,
+    )
+    parser_parse.add_argument(
+        "path",
+        help="the path of the file to parse",
+        type=str,
+    )
+    parser_parse.set_defaults(func=lambda args: parse_file(args.path,args.match))
+    # TODO: output format option
+
     args = parser.parse_args()
 
-    if args.download:
-        save_scihub(args.download, args.output)
-    elif args.file:
-        with open(args.file, "r") as f:
-            identifiers = f.read().splitlines()
-            for identifier in identifiers:
-                save_scihub(identifier, args.output)
+    if hasattr(args, 'func'):
+        print(args.func(args))
 
 
 if __name__ == "__main__":

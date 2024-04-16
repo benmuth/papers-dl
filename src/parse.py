@@ -15,3 +15,11 @@ def parse_ids(content, id_type):
     except Exception as e:
         print(f'An error occurred: {e}')
 
+def parse_file(path, id_type):
+    try:
+        print(path)
+        with open(path) as f:
+            content = f.read()
+            return parse_ids(content, id_type)
+    except Exception as e:
+        print(f"Error: {e}")

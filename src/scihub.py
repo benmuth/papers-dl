@@ -15,7 +15,6 @@ Sci-API Unofficial API
 
 from collections.abc import MutableMapping
 import re
-import argparse
 import hashlib
 import logging
 import os
@@ -166,7 +165,7 @@ class SciHub(object):
             start += 10
 
     @retry(wait_random_min=100, wait_random_max=1000, stop_max_attempt_number=10)
-    def download(self, identifier, destination="", path=None):
+    def download(self, identifier, destination="", path=None) -> dict[str, bytes | str] | None:
         """
         Downloads a paper from sci-hub given an indentifier (DOI, PMID, URL).
         Currently, this can potentially be blocked by a captcha if a certain
