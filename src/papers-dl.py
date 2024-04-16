@@ -84,6 +84,7 @@ def download_from_identifier(
 
     print(f"Successfully downloaded file with identifier {identifier}")
 
+    # try to use actual title of paper
     result_path = os.path.join(out, result["name"])
 
     try:
@@ -105,44 +106,12 @@ def download_from_identifier(
 
 def save_scihub(identifier: str, out: str):
     sh = SciHub()
-    # pdf2doi.pdf2doi.config.set()
-    base_url_list = list(sh.available_base_url_list)
-    if "http" in identifier:
-        print(f"Attempting to download from {identifier}")
-        try:
-            download_from_identifier(identifier, out, sh)
-        except IdentifierNotFoundError:
-            print(
-                "Identifier not found on sci-hub mirrors. Parsing HTML for new identifiers."
-            )
-            dois = parse_dois_from_html(download_url(identifier))
-            if dois:
-                print(f"Found DOIs in HTML: {dois}\n Attempting to download")
-            else:
-                print("No valid identifiers found")
-            for doi in dois:
-                sh.available_base_url_list = base_url_list
-                download_from_identifier(doi, out, sh)
-    elif ".pdf" in identifier:
-        # pdf2doi can also take directories of pdfs, which will return a list of
-        # dicts, but we're not handling that case here yet
-        result = pdf2doi.pdf2doi(identifier)
-        print(result["identifier"])
-
-        validation_info = json.loads(result["validation_info"])
-        references = validation_info["reference"]
-        dois = [reference["DOI"] for reference in references if "DOI" in reference]
-        # print(f'dois: {dois}')
-        for doi in dois:
-            download_from_identifier(doi, out, sh)
-        # print('URL: %s' % validation_info['URL'])
-    else:
-        dois = parse_dois_from_text(identifier)
-        print(f"Attempting to download from {dois}")
-        if not dois:
-            raise Exception("No DOIs found in input.")
-        for doi in dois:
-            download_from_identifier(doi, out, sh)
+    dois = parse_dois_from_text(identifier)
+    print(f"Attempting to download from {dois}")
+    if not dois:
+        raise Exception("No DOIs found in input.")
+    for doi in dois:
+        download_from_identifier(doi, out, sh)
 
 
 def main():
@@ -171,8 +140,6 @@ def main():
         type=str,
     )
 
-    parser_fetch.set_defaults(func= lambda args: save_scihub(args.query, args.output))
-
     # PARSE
     parser_parse = subparsers.add_parser("parse", help="parse identifiers from a file")
     parser_parse.add_argument(
@@ -189,8 +156,9 @@ def main():
         help="the path of the file to parse",
         type=str,
     )
-    parser_parse.set_defaults(func=lambda args: parse_file(args.path,args.match))
-    # TODO: output format option
+
+    parser_fetch.set_defaults(func= lambda args: save_scihub(args.query, args.output))
+    parser_parse.set_defaults(func= lambda args: parse_file(args.path,args.match))
 
     args = parser.parse_args()
 
