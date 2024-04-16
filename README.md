@@ -2,18 +2,41 @@
 `papers-dl` is a command line application for downloading scientific papers.
 
 ## Usage
+```
+usage: papers-dl.py [-h] {fetch,parse} ...
 
-`python papers-dl.py -d <DOI|URL> -o <output directory>`
+Download scientific papers from the command line
 
-or
+positional arguments:
+  {fetch,parse}
+    fetch        try to download a paper from the given
+                 query
+    parse        parse identifiers from a file
 
-`python papers-dl.py -f <text file with newline separated DOIs|URLs> -o <output directory>`
+options:
+  -h, --help     show this help message and exit
+  
+# fetch
+usage: papers-dl.py fetch [-h] [-o path] (DOI|PMID|URL)
 
-It should either
+positional arguments:
+  (DOI|PMID|URL)        the identifier to try to download
 
-- download the paper directly identified by the DOI or URL you gave it
-- if you gave it a URL but it can't directly find a paper through it, then it will parse the page's HTML for DOIs and attempt to download all DOIs that are found.
+options:
+  -h, --help            show this help message and exit
+  -o path, --output path
+                        optional output directory for
+                        downloaded papers
 
-In the second case, we can probably be smarter about only downloading the DOIs intended (based on title or something?), but it's pretty dumb right now.
+# parse
+usage: papers-dl.py parse [-h] [-m type] path
 
+positional arguments:
+  path                  the path of the file to parse
+
+options:
+  -h, --help            show this help message and exit
+  -m type, --match type
+                        the type of identifier to match
+```
 This project includes a modified version of [scihub.py](https://github.com/zaytoun/scihub.py).
