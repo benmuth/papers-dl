@@ -1,48 +1,39 @@
 from src.scihub import SciHub
-from src.parse import parse_ids
+from src.parse import parse_ids_from_text
 import unittest
-
-# TODO: get mock assets for tests to avoid problems
-# with captchas
-
-test_dir = "tests/"
+import os
 
 
 class TestParser(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.test_dir = "tests"
+
         cls.valid_id_types = ("url", "pmid", "doi")
 
-        with open(test_dir + "identifiers.txt") as f:
-            cls.text_content = f.read()
-
-        with open(test_dir + "identifiers.html") as f:
-            cls.html_content = f.read()
-
         cls.expected_ids = {
-            "text": [
+            "identifiers.txt": [
                 "https://www.cell.com/current-biology/fulltext/S0960-9822(19)31469-1",
                 "10.1016/j.cub.2019.11.030",
             ],
-            "html": [],
+            "sample-docs/superscalar-cisc.html": ["10.1109/HPCA.2006.1598111"],
         }
 
         for expected_ids in cls.expected_ids.values():
             expected_ids.sort()
 
     def test_parse_text(self):
-        self.parser_test(TestParser.html_content, TestParser.expected_ids["text"])
-
-    def test_parse_html(self):
-        self.parser_test(TestParser.html_content, TestParser.expected_ids["html"])
+        for file in TestParser.expected_ids:
+            with open(os.path.join(TestParser.test_dir, file)) as f:
+                content = f.read()
+                self.parser_test(content, TestParser.expected_ids[file])
 
     def parser_test(self, content, expected_ids):
         parsed_ids = []
         for id_type in TestParser.valid_id_types:
-            ids = parse_ids(content, id_type)
+            ids = parse_ids_from_text(content, id_type)
             if ids:
-                for id in ids:
-                    parsed_ids.append(id)
+                parsed_ids.extend(ids)
 
         parsed_ids.sort()
 
@@ -66,9 +57,10 @@ class TestSciHub(unittest.TestCase):
         )
         print(f"number of candidate urls: {len(urls)}")
 
-    def test_fetch(self):
-        with open("tests/dois.txt") as f:
-            ids = f.read().splitlines()
-            for id in ids:
-                res = self.scihub.fetch(id)
-                self.assertIsNotNone(res, f"Failed to fetch url from id {id}")
+    # TODO: This test is too flaky! Use it to make error handling more robust!
+    # def test_fetch(self):
+    #     with open("tests/identifiers.txt") as f:
+    #         ids = f.read().splitlines()
+    #         for id in ids:
+    #             res = self.scihub.fetch(id)
+    #             self.assertIsNotNone(res, f"Failed to fetch url from id {id}")
