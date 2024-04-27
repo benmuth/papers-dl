@@ -38,6 +38,7 @@ def download_url(url: str, timeout: int = 10) -> str:
 def download_from_identifier(
     identifier: str, out: str, sh: SciHub, name: str | None = None
 ):
+    "find a paper with the given identifier and download it to the output directory. name will be the name of the output file if given, otherwise we attempt to find a title from the PDF contents."
     result = sh.download(identifier, out)
     if not result:
         return
@@ -56,7 +57,7 @@ def download_from_identifier(
 
     title = validation_info.get("title")
 
-    file_name = title if title else name
+    file_name = name if name else title
     if file_name:
         file_name += ".pdf"
         new_path = os.path.join(out, file_name)

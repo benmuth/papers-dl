@@ -2,11 +2,17 @@ import re
 import os
 
 
-# regexes taken from https://www.crossref.org/blog/dois-and-matching-regular-expressions/
-# listed in decreasing order of goodness. Not tested yet.
 patterns = {
-    "url": [r'https?://[^\s<>"]+|www\.[^\s<>"]+'],
-    "pmid": [r"PMID:?\s*(\d+)"],
+    # "url": [
+    #     #     r"https://doi\.org/",
+    #     r'https?://[^\s<>"]+|www\.[^\s<>"]+'
+    # ],
+    # "pmid": [r"PMID:?\s*(\d+)"],
+    # TODO: check out this gist for parsing isbn
+    # https://gist.github.com/oscarmorrison/3744fa216dcfdb3d0bcb
+    # "isbn": [r"^(?:ISBN(?:-13)?:?\ )?(?=[0-9]{13}$|(?=(?:[0-9]+[-\ ]){4})[-\ 0-9]{17}$)97[89][-\ ]?[0-9]{1,5}[-\ ]?[0-9]+[-\ ]?[0-9]+[-\ ]?[0-9]$"],
+    # doi regexes taken from https://www.crossref.org/blog/dois-and-matching-regular-expressions/
+    # listed in decreasing order of goodness. Not tested yet.
     "doi": [
         r"10.\d{4,9}\/[-._;()\/:A-Z0-9]+",
         r"10.1002\/[^\s]+",
@@ -17,14 +23,14 @@ patterns = {
 }
 
 
-def parse_ids_from_text(s: str, id_type: str) -> set[str]:
+def parse_ids_from_text(s: str, id_type: str) -> list[str]:
     matches = []
     for regex in patterns[id_type]:
         matches.extend(re.findall(regex, s, re.IGNORECASE))
-    return set(matches)
+    return list(set(matches))  # dedupe
 
 
-def filter_dois(doi_matches: set[str]):
+def filter_dois(doi_matches: list[str]):
     # NOTE: Only keeping pdfs and matches without extensions.
     # Haven't tested if this is a reasonable filter
     filtered_dois = []

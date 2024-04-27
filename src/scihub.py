@@ -1,18 +1,3 @@
-# -*- coding: utf-8 -*-
-
-# I modified this in a few ways from the `scihub.py` GH repo:
-# - the user agent is changed to work on my Mac
-# - it will now search through all Sci-Hub links from sci-hub.now.sh for the source PDF
-# instead of giving up after the first one
-# - I added a specific exception for when no identifier matches in any base Sci-Hub url
-
-"""
-Sci-API Unofficial API
-[Search|Download] research papers from [scholar.google.com|sci-hub.io].
-
-@author zaytoun
-"""
-
 from collections.abc import MutableMapping
 import re
 import hashlib

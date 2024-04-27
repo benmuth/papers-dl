@@ -9,36 +9,24 @@ class TestParser(unittest.TestCase):
     def setUpClass(cls):
         cls.test_dir = "tests"
 
-        cls.valid_id_types = ("url", "pmid", "doi")
-
-        cls.expected_ids = {
-            "identifiers.txt": [
-                "https://www.cell.com/current-biology/fulltext/S0960-9822(19)31469-1",
-                "10.1016/j.cub.2019.11.030",
-            ],
-            "sample-docs/superscalar-cisc.html": ["10.1109/HPCA.2006.1598111"],
-        }
-
-        for expected_ids in cls.expected_ids.values():
-            expected_ids.sort()
+        cls.valid_id_types = ("doi",)
 
     def test_parse_text(self):
-        for file in TestParser.expected_ids:
+        for file in test_document_ids:
             with open(os.path.join(TestParser.test_dir, file)) as f:
-                content = f.read()
-                self.parser_test(content, TestParser.expected_ids[file])
+                file_content = f.read()
+            for id_type in TestParser.valid_id_types:
+                parsed_ids = parse_ids_from_text(file_content, id_type)
+                expected_ids = test_document_ids[file].get(id_type)
+                if not expected_ids:
+                    continue
 
-    def parser_test(self, content, expected_ids):
-        parsed_ids = []
-        for id_type in TestParser.valid_id_types:
-            ids = parse_ids_from_text(content, id_type)
-            if ids:
-                parsed_ids.extend(ids)
-
-        parsed_ids.sort()
-
-        for i in range(len(expected_ids)):
-            self.assertEqual(expected_ids[i], parsed_ids[i])
+                for expected_id in expected_ids:
+                    self.assertIn(
+                        expected_id,
+                        parsed_ids,
+                        f"ID {expected_id} not found in {file} for ID type {id_type}",
+                    )
 
 
 class TestSciHub(unittest.TestCase):
@@ -47,7 +35,7 @@ class TestSciHub(unittest.TestCase):
 
     def test_scihub_up(self):
         """
-        Tests to verify that `scihub.now.sh` is working
+        Tests to verify that `scihub.now.sh` is available
         """
         urls = self.scihub.available_base_url_list
         self.assertNotEqual(
@@ -64,3 +52,36 @@ class TestSciHub(unittest.TestCase):
     #         for id in ids:
     #             res = self.scihub.fetch(id)
     #             self.assertIsNotNone(res, f"Failed to fetch url from id {id}")
+
+
+test_document_ids = {
+    "identifiers.txt": {
+        "url": ["https://www.cell.com/current-biology/fulltext/S0960-9822(19)31469-1"],
+        "doi": ["10.1016/j.cub.2019.11.030"],
+    },
+    "sample-docs/bsp-tree.html": {
+        "doi": ["10.1109/83.544569"],
+        "issn": ["1057-7149", "1941-0042"],
+    },
+    "sample-docs/reyes-rendering.html": {
+        "doi": ["10.1145/37402.37414"],
+        "url": [
+            "https://dl.acm.org/doi/10.1145/3603521.3604289",
+            "https://doi.org/10.1145/3596711.3596742",
+            "https://doi.org/10.1145/37402.37414",
+        ],
+    },
+    "sample-docs/superscalar-cisc.html": {
+        "doi": ["10.1109/HPCA.2006.1598111"],
+        "issn": ["1530-0897", "2378-203X"],
+    },
+    "sample-docs/b-tree-techniques.html": {
+        "doi": ["10.1561/1900000028"],
+        "url": ["http://dx.doi.org/10.1561/1900000028"],
+        "isbn": ["978-1-60198-482-1", "978-1-60198-483-8"],
+    },
+    "sample-docs/real-time-rendering.html": {
+        "url": ["https://doi.org/10.1201/9781315365459"],
+        "isbn": ["9781315365459"],
+    },
+}
