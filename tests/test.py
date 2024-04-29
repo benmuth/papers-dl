@@ -21,6 +21,7 @@ class TestParser(unittest.TestCase):
                 if not expected_ids:
                     continue
 
+                parsed_ids = [id[1] for id in parsed_ids] # flatten
                 for expected_id in expected_ids:
                     self.assertIn(
                         expected_id,

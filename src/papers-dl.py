@@ -5,7 +5,7 @@ import requests
 from w3lib.encoding import html_body_declared_encoding, http_content_type_encoding
 
 from scihub import SciHub
-from parse import parse_file
+from parse import parse_file, print_output
 import pdf2doi
 import json
 
@@ -80,7 +80,7 @@ def main():
 
     # FETCH
     parser_fetch = subparsers.add_parser(
-        "fetch", help="try to download a paper from the given query"
+        "fetch", help="try to download a paper with the given identifier"
     )
 
     parser_fetch.add_argument(
@@ -115,9 +115,25 @@ def main():
         help="the path of the file to parse",
         type=str,
     )
+    parser_parse.add_argument(
+        "-f",
+        "--format",
+        help="the output format for printing",
+        metavar="fmt",
+        default="raw",
+        choices=["raw", "jsonl", "csv"],
+        nargs="?",
+    )
 
-    parser_fetch.set_defaults(func=lambda args: save_scihub(args.query, args.output))
-    parser_parse.set_defaults(func=lambda args: parse_file(args.path, args.match))
+    parser_fetch.set_defaults(
+        func=lambda fetch_args: save_scihub(fetch_args.query, fetch_args.output)
+    )
+    parser_parse.set_defaults(
+        func=lambda parse_args: print_output(
+            parse_file(parse_args.path, parse_args.match),
+            parse_args.format,
+        )
+    )
 
     args = parser.parse_args()
 
