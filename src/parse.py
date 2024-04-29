@@ -3,15 +3,17 @@ import os
 import json
 
 
-patterns = {
+id_patterns = {
     # "url": [
     #     #     r"https://doi\.org/",
     #     r'https?://[^\s<>"]+|www\.[^\s<>"]+'
     # ],
     # "pmid": [r"PMID:?\s*(\d+)"],
-    # TODO: check out this gist for parsing isbn
-    # https://gist.github.com/oscarmorrison/3744fa216dcfdb3d0bcb
-    # "isbn": [r"^(?:ISBN(?:-13)?:?\ )?(?=[0-9]{13}$|(?=(?:[0-9]+[-\ ]){4})[-\ 0-9]{17}$)97[89][-\ ]?[0-9]{1,5}[-\ ]?[0-9]+[-\ ]?[0-9]+[-\ ]?[0-9]$"],
+    # These come from https://gist.github.com/oscarmorrison/3744fa216dcfdb3d0bcb
+    "isbn": [
+        r"(?:ISBN(?:-10)?:?\ )?(?=[0-9X]{10}|(?=(?:[0-9]+[-\ ]){3})[-\ 0-9X]{13})[0-9]{1,5}[-\ ]?[0-9]+[-\ ]?[0-9]+[-\ ]?[0-9X]",
+        r"(?:ISBN(?:-13)?:?\ )?(?=[0-9]{13}|(?=(?:[0-9]+[-\ ]){4})[-\ 0-9]{17})97[89][-\ ]?[0-9]{1,5}[-\ ]?[0-9]+[-\ ]?[0-9]+[-\ ]?[0-9]",
+    ],
     # doi regexes taken from https://www.crossref.org/blog/dois-and-matching-regular-expressions/
     # listed in decreasing order of goodness. Not tested yet.
     "doi": [
@@ -24,9 +26,9 @@ patterns = {
 }
 
 
-def parse_ids_from_text(s: str, id_type: str) -> list[tuple[str,str]]:
+def parse_ids_from_text(s: str, id_type: str) -> list[tuple[str, str]]:
     matches = []
-    for regex in patterns[id_type]:
+    for regex in id_patterns[id_type]:
         for match in re.findall(regex, s, re.IGNORECASE):
             matches.append((id_type, match))
     return matches
@@ -67,7 +69,7 @@ def print_output(output: list[tuple[str, str]], format: str) -> None:
     elif format == "csv":
         for line in output:
             for i in range(len(line)):
-                if i < len(line)- 1:
+                if i < len(line) - 1:
                     print(line[i], end=",")
                 else:
                     print(line[i])

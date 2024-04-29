@@ -9,7 +9,7 @@ from parse import parse_file, print_output
 import pdf2doi
 import json
 
-supported_identifier_types = ["doi", "pmid", "url"]
+supported_fetch_identifier_types = ["doi", "pmid", "url", "isbn"]
 
 
 # yoinked from archivebox/util.py
@@ -108,7 +108,7 @@ def main():
         help="the type of identifier to match",
         default="doi",
         type=str,
-        choices=supported_identifier_types,
+        choices=supported_fetch_identifier_types,
     )
     parser_parse.add_argument(
         "path",

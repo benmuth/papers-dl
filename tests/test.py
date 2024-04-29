@@ -1,5 +1,5 @@
 from src.scihub import SciHub
-from src.parse import parse_ids_from_text
+from src.parse import parse_ids_from_text, id_patterns
 import unittest
 import os
 
@@ -9,7 +9,7 @@ class TestParser(unittest.TestCase):
     def setUpClass(cls):
         cls.test_dir = "tests"
 
-        cls.valid_id_types = ("doi",)
+        cls.valid_id_types = id_patterns.keys()
 
     def test_parse_text(self):
         for file in test_document_ids:
