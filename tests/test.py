@@ -36,23 +36,19 @@ class TestSciHub(unittest.TestCase):
 
     def test_scihub_up(self):
         """
-        Tests to verify that `scihub.now.sh` is available
+        Test to verify that `scihub.now.sh` is available
         """
         urls = self.scihub.available_base_url_list
-        self.assertNotEqual(
-            len(urls),
-            0,
-            "Failed to find Sci-Hub domains",
-        )
+        self.assertIsNotNone(urls, "Failed to find Sci-Hub domains")
         print(f"number of candidate urls: {len(urls)}")
 
-    # TODO: This test is too flaky! Use it to make error handling more robust!
-    # def test_fetch(self):
-    #     with open("tests/identifiers.txt") as f:
-    #         ids = f.read().splitlines()
-    #         for id in ids:
-    #             res = self.scihub.fetch(id)
-    #             self.assertIsNotNone(res, f"Failed to fetch url from id {id}")
+    # TODO: This test is flaky! Use it to make error handling more robust!
+    def test_fetch(self):
+        with open("tests/identifiers.txt") as f:
+            ids = f.read().splitlines()
+            for id in ids:
+                res = self.scihub.fetch(id)
+                self.assertIsNotNone(res, f"Failed to fetch url from id {id}")
 
 
 test_document_ids = {

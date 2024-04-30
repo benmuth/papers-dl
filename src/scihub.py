@@ -26,9 +26,9 @@ urllib3.disable_warnings()
 # DOI - digital object identifier
 IDClass = enum.Enum("identifier", ["URL-DIRECT", "URL-NON-DIRECT", "PMD", "DOI"])
 
-# constants
 SCHOLARS_BASE_URL = "https://scholar.google.com/scholar"
-HEADERS: MutableMapping = {
+
+HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15"
 }
 
@@ -93,7 +93,7 @@ class SciHub(object):
 
     def _change_base_url(self):
         if not self.available_base_url_list:
-            logger.critical("Ran out of valid sci-hub urls")
+            logger.error("Ran out of valid sci-hub urls")
             raise IdentifierNotFoundError()
         del self.available_base_url_list[0]
         self.base_url = self.available_base_url_list[0] + "/"
@@ -150,7 +150,7 @@ class SciHub(object):
             start += 10
 
     @retry(wait_random_min=100, wait_random_max=1000, stop_max_attempt_number=10)
-    def download(self, identifier, destination="", path=None) -> dict[str, bytes | str] | None:
+    def download(self, identifier, destination="", path=None) -> dict[str, str] | None:
         """
         Downloads a paper from sci-hub given an indentifier (DOI, PMID, URL).
         Currently, this can potentially be blocked by a captcha if a certain
@@ -161,11 +161,12 @@ class SciHub(object):
         # TODO: allow for passing in name
         if data:
             self._save(
-                data["pdf"], os.path.join(destination, path if path else data["name"])
+                data["pdf"],
+                os.path.join(destination, path if path else data["name"]),
             )
         return data
 
-    def fetch(self, identifier) -> dict[str, bytes | str] | None:
+    def fetch(self, identifier) -> dict[str, str | None] | None:
         """
         Fetches the paper by first retrieving the direct link to the pdf.
         If the indentifier is a DOI, PMID, or URL pay-wall, then use Sci-Hub
@@ -173,9 +174,10 @@ class SciHub(object):
         """
         url = None
         try:
+            # find the url to the pdf for a given identifier
             url = self._get_direct_url(identifier)
-            if not url:
-                raise ValueError("No URL found")
+            logger.info("Found potential source at %s", identifier)
+
             # verify=False is dangerous but sci-hub.io
             # requires intermediate certificates to verify
             # and requests doesn't know how to download them.
@@ -185,34 +187,26 @@ class SciHub(object):
             res = self.sess.get(url, verify=True)
 
             if res.headers["Content-Type"] != "application/pdf":
-                logger.info(
-                    "Failed to fetch pdf with identifier %s (resolved url %s) due to captcha",
+                logger.error(
+                    "Failed to fetch pdf with identifier %s (resolved url %s) due to captcha.",
                     identifier,
                     url,
                 )
                 self._change_base_url()
-                raise SiteAccessError()
+                self.fetch(identifier)
             else:
                 return {
-                    "pdf": res.content,
+                    "pdf": str(res.content),
                     "url": url,
                     "name": self._generate_name(res),
                 }
 
-        except requests.exceptions.ConnectionError as e:
+        except Exception as e:
             logger.info(
-                "Cannot access %s, changing url", self.available_base_url_list[0]
+                "Cannot access %s: %s, changing url", self.available_base_url_list[0], e
             )
             self._change_base_url()
-            raise e
-
-        except requests.exceptions.RequestException as e:
-            logger.error(
-                "Failed to fetch pdf with identifier %s (resolved url %s) due to request exception.",
-                identifier,
-                url,
-            )
-            return None
+            self.fetch(identifier)
 
     def _get_direct_url(self, identifier: str) -> str | None:
         """
@@ -274,7 +268,7 @@ class SciHub(object):
             with open(path, "wb") as f:
                 f.write(data)
         except Exception as e:
-            logger.info("Failed to write to %s (%s)", path, e.__str__)
+            logger.error("Failed to write to %s (%s)", path, e.__str__)
             raise e
 
     def _get_soup(self, html):

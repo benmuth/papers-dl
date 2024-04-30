@@ -4,11 +4,6 @@ import json
 
 
 id_patterns = {
-    # "url": [
-    #     #     r"https://doi\.org/",
-    #     r'https?://[^\s<>"]+|www\.[^\s<>"]+'
-    # ],
-    # "pmid": [r"PMID:?\s*(\d+)"],
     # These come from https://gist.github.com/oscarmorrison/3744fa216dcfdb3d0bcb
     "isbn": [
         r"(?:ISBN(?:-10)?:?\ )?(?=[0-9X]{10}|(?=(?:[0-9]+[-\ ]){3})[-\ 0-9X]{13})[0-9]{1,5}[-\ ]?[0-9]+[-\ ]?[0-9]+[-\ ]?[0-9X]",
