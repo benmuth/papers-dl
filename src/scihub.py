@@ -16,21 +16,13 @@ logging.basicConfig()
 logger = logging.getLogger("Sci-Hub")
 logger.setLevel(logging.DEBUG)
 
-#
 urllib3.disable_warnings()
-
 
 # URL-DIRECT - openly accessible paper
 # URL-NON-DIRECT - pay-walled paper
 # PMID - PubMed ID
 # DOI - digital object identifier
 IDClass = enum.Enum("identifier", ["URL-DIRECT", "URL-NON-DIRECT", "PMD", "DOI"])
-
-SCHOLARS_BASE_URL = "https://scholar.google.com/scholar"
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15"
-}
 
 
 class IdentifierNotFoundError(Exception):
@@ -51,9 +43,11 @@ class SciHub(object):
     and fetch/download papers from sci-hub.io
     """
 
-    def __init__(self):
+    def __init__(self, user_agent):
         self.sess = requests.Session()
-        self.sess.headers = HEADERS
+        self.sess.headers = {
+            "User-Agent": user_agent,
+        }
         self.available_base_url_list = self._get_available_scihub_urls()
 
         self.base_url = self.available_base_url_list[0] + "/"
@@ -99,57 +93,6 @@ class SciHub(object):
         self.base_url = self.available_base_url_list[0] + "/"
         logger.info("I'm changing to {}".format(self.available_base_url_list[0]))
 
-    def search(self, query, limit=10, download=False):
-        """
-        Performs a query on scholar.google.com, and returns a dictionary
-        of results in the form {'papers': ...}. Unfortunately, as of now,
-        captchas can potentially prevent searches after a certain limit.
-        """
-        start = 0
-        results = {"papers": []}
-
-        while True:
-            try:
-                res = self.sess.get(
-                    SCHOLARS_BASE_URL, params={"q": query, "start": start}
-                )
-            except requests.exceptions.RequestException as e:
-                logger.error(
-                    "Failed to complete search with query %s (connection error)", query
-                )
-                raise e
-
-            s = self._get_soup(res.content)
-            papers = s.find_all("div", class_="gs_r")
-
-            if not papers:
-                if "CAPTCHA" in str(res.content):
-                    logger.error(
-                        "Failed to complete search with query %s (captcha)", query
-                    )
-                    raise SiteAccessError
-
-            for paper in papers:
-                if not paper.find("table"):
-                    source = None
-                    pdf = paper.find("div", class_="gs_ggs gs_fl")
-                    link = paper.find("h3", class_="gs_rt")
-
-                    if pdf:
-                        source = pdf.find("a")["href"]
-                    elif link.find("a"):
-                        source = link.find("a")["href"]
-                    else:
-                        continue
-
-                    results["papers"].append({"name": link.text, "url": source})
-
-                    if len(results["papers"]) >= limit:
-                        return results
-
-            start += 10
-
-    @retry(wait_random_min=100, wait_random_max=1000, stop_max_attempt_number=10)
     def download(self, identifier, destination="", path=None) -> dict[str, str] | None:
         """
         Downloads a paper from sci-hub given an indentifier (DOI, PMID, URL).
@@ -166,7 +109,8 @@ class SciHub(object):
             )
         return data
 
-    def fetch(self, identifier) -> dict[str, str | None] | None:
+    @retry(wait_random_min=100, wait_random_max=1000, stop_max_attempt_number=20)
+    def fetch(self, identifier) -> dict[str, str | bytes | None] | None:
         """
         Fetches the paper by first retrieving the direct link to the pdf.
         If the indentifier is a DOI, PMID, or URL pay-wall, then use Sci-Hub
@@ -188,25 +132,25 @@ class SciHub(object):
 
             if res.headers["Content-Type"] != "application/pdf":
                 logger.error(
-                    "Failed to fetch pdf with identifier %s (resolved url %s) due to captcha.",
+                    "Failed to fetch PDF with identifier %s (resolved url %s) due to captcha, changing url...",
                     identifier,
                     url,
                 )
                 self._change_base_url()
-                self.fetch(identifier)
+                raise CaptchaNeededError("Failed to fetch PDF due to captcha")
             else:
                 return {
-                    "pdf": str(res.content),
+                    "pdf": res.content,
                     "url": url,
                     "name": self._generate_name(res),
                 }
 
         except Exception as e:
             logger.info(
-                "Cannot access %s: %s, changing url", self.available_base_url_list[0], e
+                "Cannot access %s: %s, changing url...", self.available_base_url_list[0], e
             )
             self._change_base_url()
-            self.fetch(identifier)
+            raise SiteAccessError("Failed to access site")
 
     def _get_direct_url(self, identifier: str) -> str | None:
         """

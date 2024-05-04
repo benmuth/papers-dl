@@ -20,12 +20,12 @@ id_patterns = {
     ],
 }
 
-
-def parse_ids_from_text(s: str, id_type: str) -> list[tuple[str, str]]:
+def parse_ids_from_text(s: str, id_types: list[str]) -> list[tuple[str, str]]:
     matches = []
-    for regex in id_patterns[id_type]:
-        for match in re.findall(regex, s, re.IGNORECASE):
-            matches.append((id_type, match))
+    for id_type in id_types:
+        for regex in id_patterns[id_type]:
+            for match in re.findall(regex, s, re.IGNORECASE):
+                matches.append((id_type, match))
     return matches
 
 
