@@ -5,40 +5,26 @@ import requests
 from w3lib.encoding import html_body_declared_encoding, http_content_type_encoding
 
 from scihub import SciHub
-from parse import parse_file, print_output
+from parse import parse_file, print_output, id_patterns
 import pdf2doi
 import json
 
 supported_fetch_identifier_types = ["doi", "pmid", "url", "isbn"]
 
 
-# yoinked from archivebox/util.py
-def download_url(url: str, timeout: int = 10) -> str:
-    """Download the contents of a remote url and return the text"""
-    response = requests.get(
-        url,
-        headers={
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15"
-        },
-        verify=True,
-        timeout=timeout,
-    )
-
-    content_type = response.headers.get("Content-Type", "")
-    encoding = http_content_type_encoding(content_type) or html_body_declared_encoding(
-        response.text
-    )
-
-    if encoding is not None:
-        response.encoding = encoding
-
-    return response.text
+DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15"
 
 
-def download_from_identifier(
-    identifier: str, out: str, sh: SciHub, name: str | None = None
-):
-    "find a paper with the given identifier and download it to the output directory. name will be the name of the output file if given, otherwise we attempt to find a title from the PDF contents."
+def save_scihub(identifier: str, out: str, user_agent: str, name: str | None = None):
+    """
+    find a paper with the given identifier and download it to the output 
+    directory. If given, name will be the name of the output file. otherwise
+    we attempt to find a title from the PDF contents.
+    """
+
+    sh = SciHub(user_agent)
+    print(f"Attempting to download from {identifier}")
+
     result = sh.download(identifier, out)
     if not result:
         return
@@ -46,6 +32,7 @@ def download_from_identifier(
     print(f"Successfully downloaded file with identifier {identifier}")
 
     # try to use actual title of paper
+    pdf2doi.config.set("verbose", False)
     result_path = os.path.join(out, result["name"])
 
     try:
@@ -63,12 +50,6 @@ def download_from_identifier(
         new_path = os.path.join(out, file_name)
         os.rename(result_path, new_path)
         print(f"File downloaded to {new_path}")
-
-
-def save_scihub(identifier: str, out: str):
-    sh = SciHub()
-    print(f"Attempting to download from {identifier}")
-    download_from_identifier(identifier, out, sh)
 
 
 def main():
@@ -99,6 +80,14 @@ def main():
         type=str,
     )
 
+    parser_fetch.add_argument(
+        "-A",
+        "--user-agent",
+        help="",
+        default=DEFAULT_USER_AGENT,
+        type=str,
+    )
+
     # PARSE
     parser_parse = subparsers.add_parser("parse", help="parse identifiers from a file")
     parser_parse.add_argument(
@@ -106,9 +95,10 @@ def main():
         "--match",
         metavar="type",
         help="the type of identifier to match",
-        default="doi",
         type=str,
-        choices=supported_fetch_identifier_types,
+        # choices=id_patterns.keys(),
+        action="append",
+        # nargs="+",
     )
     parser_parse.add_argument(
         "path",
@@ -126,7 +116,9 @@ def main():
     )
 
     parser_fetch.set_defaults(
-        func=lambda fetch_args: save_scihub(fetch_args.query, fetch_args.output)
+        func=lambda fetch_args: save_scihub(
+            fetch_args.query, fetch_args.output, fetch_args.user_agent
+        )
     )
     parser_parse.set_defaults(
         func=lambda parse_args: print_output(
