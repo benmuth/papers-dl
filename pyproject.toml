@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "papers-dl"
-version = "0.0.4"
+version = "0.0.5"
 authors = [
   { name="Ben Muthalaly", email="benmuthalaly@gmail.com" },
 ]
@@ -43,6 +43,9 @@ dependencies = [
   "urllib3==2.2.1",
   "w3lib==2.1.2",
 ]
+
+[project.scripts]
+papers-dl = "papers_dl:main"
 
 [project.urls]
 Homepage = "https://github.com/benmuth/papers-dl"
