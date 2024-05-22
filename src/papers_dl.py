@@ -17,7 +17,7 @@ DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKi
 
 def save_scihub(identifier: str, out: str, user_agent: str, name: str | None = None):
     """
-    find a paper with the given identifier and download it to the output 
+    find a paper with the given identifier and download it to the output
     directory. If given, name will be the name of the output file. otherwise
     we attempt to find a title from the PDF contents.
     """
@@ -53,9 +53,14 @@ def save_scihub(identifier: str, out: str, user_agent: str, name: str | None = N
 
 
 def main():
+    name = "papers-dl"
     parser = argparse.ArgumentParser(
-        description="Download scientific papers from the command line"
+        prog=name,
+        description="Download scientific papers from the command line",
     )
+
+    from version import __version__
+    parser.add_argument("--version", "-v", action="version", version=f"{name} {__version__}")
 
     subparsers = parser.add_subparsers()
 

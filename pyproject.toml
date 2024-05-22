@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "papers-dl"
-version = "0.0.5"
 authors = [
   { name="Ben Muthalaly", email="benmuthalaly@gmail.com" },
 ]
 description = "A command line application for downloading scientific papers"
 readme = "README.md"
 requires-python = ">=3.8"
+dynamic=["version"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -50,3 +50,6 @@ papers-dl = "papers_dl:main"
 [project.urls]
 Homepage = "https://github.com/benmuth/papers-dl"
 Issues = "https://github.com/benmuth/papers-dl/issues"
+
+[tool.setuptools.dynamic]
+version = {attr = "version.__version__"}
