@@ -1,4 +1,3 @@
-from collections.abc import MutableMapping
 import re
 import hashlib
 import logging
@@ -24,6 +23,8 @@ urllib3.disable_warnings()
 # DOI - digital object identifier
 IDClass = enum.Enum("identifier", ["URL-DIRECT", "URL-NON-DIRECT", "PMD", "DOI"])
 
+DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15"
+
 
 class IdentifierNotFoundError(Exception):
     pass
@@ -43,7 +44,7 @@ class SciHub(object):
     and fetch/download papers from sci-hub.io
     """
 
-    def __init__(self, user_agent):
+    def __init__(self, user_agent=DEFAULT_USER_AGENT):
         self.sess = requests.Session()
         self.sess.headers = {
             "User-Agent": user_agent,
@@ -147,7 +148,9 @@ class SciHub(object):
 
         except Exception as e:
             logger.info(
-                "Cannot access %s: %s, changing url...", self.available_base_url_list[0], e
+                "Cannot access %s: %s, changing url...",
+                self.available_base_url_list[0],
+                e,
             )
             self._change_base_url()
             raise SiteAccessError("Failed to access site")

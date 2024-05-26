@@ -4,6 +4,7 @@ import os
 
 target_ids = ("doi", "pmid", "isbn", "issn", "url")
 
+
 class TestParser(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -15,9 +16,10 @@ class TestParser(unittest.TestCase):
 
     def test_parse_text(self):
         """
-            Test to parse identifiers from arbitrary text.
+        Test to parse identifiers from arbitrary text.
         """
         for file in test_document_ids:
+            print(f"testing {file}")
             with open(os.path.join(TestParser.test_material_dir, file)) as f:
                 file_content = f.read()
             for id_type in TestParser.valid_id_types:
@@ -33,6 +35,7 @@ class TestParser(unittest.TestCase):
                         parsed_ids,
                         f"ID {expected_id} not found in {file} for ID type {id_type}",
                     )
+
 
 test_document_ids = {
     "ids.txt": {

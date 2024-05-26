@@ -1,18 +1,12 @@
 import argparse
 import os
 
-import requests
-from w3lib.encoding import html_body_declared_encoding, http_content_type_encoding
-
 from scihub import SciHub
-from parse import parse_file, print_output, id_patterns
+from parse import parse_file, print_output
 import pdf2doi
 import json
 
 supported_fetch_identifier_types = ["doi", "pmid", "url", "isbn"]
-
-
-DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15"
 
 
 def save_scihub(identifier: str, out: str, user_agent: str, name: str | None = None):
@@ -60,7 +54,10 @@ def main():
     )
 
     from version import __version__
-    parser.add_argument("--version", "-v", action="version", version=f"{name} {__version__}")
+
+    parser.add_argument(
+        "--version", "-v", action="version", version=f"{name} {__version__}"
+    )
 
     subparsers = parser.add_subparsers()
 
@@ -89,7 +86,7 @@ def main():
         "-A",
         "--user-agent",
         help="",
-        default=DEFAULT_USER_AGENT,
+        default=None,
         type=str,
     )
 
@@ -99,7 +96,7 @@ def main():
         "-m",
         "--match",
         metavar="type",
-        help="the type of identifier to match",
+        help="the type of identifier to search for",
         type=str,
         # choices=id_patterns.keys(),
         action="append",
