@@ -74,5 +74,5 @@ def format_output(output: list[dict[str, str]], format: str = "raw") -> str:
     elif format == "jsonl":
         lines = [json.dumps(line) for line in output]
     elif format == "csv":
-        lines = [f"{line["id"]},{line["type"]}" for line in output]
+        lines = [f"{line['id']},{line['type']}" for line in output]
     return "\n".join(lines)
