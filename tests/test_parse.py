@@ -16,25 +16,35 @@ class TestParser(unittest.TestCase):
 
     def test_parse_text(self):
         """
-        Test to parse identifiers from arbitrary text.
+        Test to parse identifiers from a set of files.
         """
+        # NOTE: this test does not fail on false positive matches
+        # for file in test_document_ids:
         for file in test_document_ids:
             print(f"testing {file}")
             with open(os.path.join(TestParser.test_material_dir, file)) as f:
                 file_content = f.read()
-            for id_type in TestParser.valid_id_types:
-                parsed_ids = parse_ids_from_text(file_content, id_type)
-                expected_ids = test_document_ids[file].get(id_type)
-                if not expected_ids:
-                    continue
 
-                parsed_ids = [id[1] for id in parsed_ids]
-                for expected_id in expected_ids:
-                    self.assertIn(
-                        expected_id,
-                        parsed_ids,
-                        f"ID {expected_id} not found in {file} for ID type {id_type}",
-                    )
+            parsed_results = parse_ids_from_text(file_content)
+
+            # just include the matching id, not the type
+            parsed_results = [result["id"] for result in parsed_results]
+
+            expected_ids = []
+            for type in test_document_ids:
+                if type in id_patterns:
+                    for id in test_document_ids[file][type]:
+                        expected_ids.append(id)
+
+            if not expected_ids:
+                continue
+
+            for expected_id in expected_ids:
+                self.assertIn(
+                    expected_id,
+                    parsed_results,
+                    f"ID {expected_id} not found in {file}",
+                )
 
 
 test_document_ids = {

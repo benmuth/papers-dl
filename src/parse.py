@@ -1,7 +1,8 @@
 import re
 import json
 
-
+# these are the currently supported identifier types that we can parse, along
+# with their regex patterns
 id_patterns = {
     # These come from https://gist.github.com/oscarmorrison/3744fa216dcfdb3d0bcb
     "isbn": [
@@ -20,43 +21,58 @@ id_patterns = {
 }
 
 
-def parse_ids_from_text(s: str, id_type: str) -> list[tuple[str, str]]:
+def parse_ids_from_text(
+    s: str, id_types: list[str] | None = None
+) -> list[dict[str, str]]:
+    """
+    Find all matches for the given id types in s. If id_types isn't given,
+    defaults to the types in id_patterns.
+    """
+
+    # we look for all ID patterns by default
+    if id_types is None:
+        id_types = list(id_patterns)
+
+    seen = set()
     matches = []
-    for regex in id_patterns[id_type]:
-        for match in re.findall(regex, s, re.IGNORECASE):
-            matches.append((id_type, match))
+    for id_type in id_types:
+        for regex in id_patterns[id_type]:
+            for match in re.findall(regex, s, re.IGNORECASE):
+                if match not in seen:
+                    matches.append({"id": match, "type": id_type})
+                seen.add(match)
     return matches
 
 
-def parse_file(path, id_types: list[str]):
+def parse_file(path, id_types: list[str] | None = None):
     """
-    Find all matches for the given id type in a file.
+    Find all matches for the given id types in a file. If id_types isn't given,
+    defaults to the types in id_patterns.
     """
-    print(f"Parsing {path}")
-    print(f"id_type: {id_types}")
 
     matches = []
     try:
         with open(path) as f:
             content = f.read()
-        for id_type in id_types:
-            matches.extend(parse_ids_from_text(content, id_type))
+        matches = parse_ids_from_text(content, id_types)
     except Exception as e:
         print(f"Error: {e}")
 
     return matches
 
 
-def print_output(output: list[tuple[str, str]], format: str) -> None:
+def format_output(output: list[dict[str, str]], format: str = "raw") -> str:
+    """
+    Formats a list of dicts of ids and id types into a string according to the
+    given format type. 'raw' formats ids by line, ignoring type. 'jsonl' and
+    'csv' formats ids and types.
+    """
+
+    lines: list[str] = []
     if format == "raw":
-        for line in output:
-            print(line[1])
+        lines = [line["id"] for line in output]
     elif format == "jsonl":
-        for line in output:
-            print(json.dumps({"id": line[1], "type": line[0]}))
+        lines = [json.dumps(line) for line in output]
     elif format == "csv":
-        for line in output:
-            print(line[0], end=",")
-            print(line[1])
-    else:
-        print(output)
+        lines = [f"{line["id"]},{line["type"]}" for line in output]
+    return "\n".join(lines)

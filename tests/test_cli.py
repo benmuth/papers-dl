@@ -5,11 +5,7 @@ test_paper_id = "10.1016/j.cub.2019.11.030"
 test_paper_title = "Parrots Voluntarily Help Each Other to Obtain Food Rewards"
 
 
-class TestPapersDLCLI(unittest.TestCase):
-    # def test_fetch_command_doi(self):
-    #     result = subprocess.run(['python', 'src/papers_dl.py', 'fetch', test_paper_id], capture_output=True, text=True)
-    #     self.assertIn(test_paper_title, result.stdout)
-
+class TestCLI(unittest.TestCase):
     def test_parse_command_doi_csv(self):
         result = subprocess.run(
             [
@@ -18,6 +14,7 @@ class TestPapersDLCLI(unittest.TestCase):
                 "parse",
                 "-m",
                 "doi",
+                "-p",
                 "tests/identifiers/bsp-tree.html",
                 "-f",
                 "csv",
@@ -25,7 +22,7 @@ class TestPapersDLCLI(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertIn("doi,10.1109/83.544569", result.stdout)
+        self.assertIn("10.1109/83.544569,doi", result.stdout)
 
     def test_parse_command_isbn_jsonl(self):
         result = subprocess.run(
@@ -35,9 +32,10 @@ class TestPapersDLCLI(unittest.TestCase):
                 "parse",
                 "-m",
                 "isbn",
-                "tests/identifiers/bsp-tree.html",
                 "-f",
                 "jsonl",
+                "-p",
+                "tests/identifiers/bsp-tree.html",
             ],
             capture_output=True,
             text=True,

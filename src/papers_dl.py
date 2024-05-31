@@ -1,8 +1,9 @@
 import argparse
 import os
+import sys
 
 from scihub import SciHub
-from parse import parse_file, print_output
+from parse import parse_file, format_output, parse_ids_from_text, id_patterns
 import pdf2doi
 import json
 
@@ -25,7 +26,7 @@ def save_scihub(identifier: str, out: str, user_agent: str, name: str | None = N
 
     print(f"Successfully downloaded file with identifier {identifier}")
 
-    # try to use actual title of paper
+    # try to find and use the actual title of the paper
     pdf2doi.config.set("verbose", False)
     result_path = os.path.join(out, result["name"])
 
@@ -44,6 +45,18 @@ def save_scihub(identifier: str, out: str, user_agent: str, name: str | None = N
         new_path = os.path.join(out, file_name)
         os.rename(result_path, new_path)
         print(f"File downloaded to {new_path}")
+
+
+def parse(args):
+    # if a path isn't passed or is empty, read from stdin
+    if not (hasattr(args, "path") and args.path):
+        return format_output(parse_ids_from_text(sys.stdin.read(), args.match))
+
+    return format_output(parse_file(args.path, args.match), args.format)
+
+
+def fetch(args):
+    save_scihub(args.query, args.output, args.user_agent)
 
 
 def main():
@@ -91,19 +104,21 @@ def main():
     )
 
     # PARSE
-    parser_parse = subparsers.add_parser("parse", help="parse identifiers from a file")
+    parser_parse = subparsers.add_parser(
+        "parse", help="parse identifiers from a file or stdin"
+    )
     parser_parse.add_argument(
         "-m",
         "--match",
         metavar="type",
         help="the type of identifier to search for",
         type=str,
-        # choices=id_patterns.keys(),
+        choices=id_patterns.keys(),
         action="append",
-        # nargs="+",
     )
     parser_parse.add_argument(
-        "path",
+        "-p",
+        "--path",
         help="the path of the file to parse",
         type=str,
     )
@@ -117,22 +132,11 @@ def main():
         nargs="?",
     )
 
-    parser_fetch.set_defaults(
-        func=lambda fetch_args: save_scihub(
-            fetch_args.query, fetch_args.output, fetch_args.user_agent
-        )
-    )
-    parser_parse.set_defaults(
-        func=lambda parse_args: print_output(
-            parse_file(parse_args.path, parse_args.match),
-            parse_args.format,
-        )
-    )
+    parser_fetch.set_defaults(func=fetch)
+    parser_parse.set_defaults(func=parse)
 
     args = parser.parse_args()
-
-    if hasattr(args, "func"):
-        print(args.func(args))
+    print(args.func(args))
 
 
 if __name__ == "__main__":
