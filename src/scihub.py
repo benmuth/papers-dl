@@ -12,8 +12,8 @@ import enum
 
 # log config
 logging.basicConfig()
-logger = logging.getLogger("Sci-Hub")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
 
 urllib3.disable_warnings()
 

@@ -1,6 +1,8 @@
 import argparse
 import os
 import sys
+import logging
+
 
 from scihub import SciHub
 from parse import parse_file, format_output, parse_ids_from_text, id_patterns
@@ -8,6 +10,10 @@ import pdf2doi
 import json
 
 supported_fetch_identifier_types = ["doi", "pmid", "url", "isbn"]
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
 
 
 def save_scihub(identifier: str, out: str, user_agent: str, name: str | None = None):
@@ -18,15 +24,15 @@ def save_scihub(identifier: str, out: str, user_agent: str, name: str | None = N
     """
 
     sh = SciHub(user_agent)
-    print(f"Attempting to download from {identifier}")
+    logging.info(f"Attempting to download from {identifier}")
 
     result = sh.download(identifier, out)
     if not result:
         return
 
-    print(f"Successfully downloaded file with identifier {identifier}")
+    logging.info(f"Successfully downloaded file with identifier {identifier}")
 
-    # try to find and use the actual title of the paper
+    logging.info("Finding paper title")
     pdf2doi.config.set("verbose", False)
     result_path = os.path.join(out, result["name"])
 
@@ -34,7 +40,7 @@ def save_scihub(identifier: str, out: str, user_agent: str, name: str | None = N
         result_info = pdf2doi.pdf2doi(result_path)
         validation_info = json.loads(result_info["validation_info"])
     except TypeError:
-        print("Invalid JSON!")
+        logging.error("Invalid JSON!")
         return
 
     title = validation_info.get("title")
@@ -44,7 +50,7 @@ def save_scihub(identifier: str, out: str, user_agent: str, name: str | None = N
         file_name += ".pdf"
         new_path = os.path.join(out, file_name)
         os.rename(result_path, new_path)
-        print(f"File downloaded to {new_path}")
+        logging.info(f"File downloaded to {new_path}")
 
 
 def parse(args):
