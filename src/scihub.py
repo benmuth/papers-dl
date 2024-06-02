@@ -27,6 +27,8 @@ DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKi
 
 
 class IdentifierNotFoundError(Exception):
+    "Error for when the identifier wasn't found at any SciHub url"
+
     pass
 
 
@@ -110,7 +112,14 @@ class SciHub(object):
             )
         return data
 
-    @retry(wait_random_min=100, wait_random_max=1000, stop_max_attempt_number=20)
+    @retry(
+        wait_random_min=100,
+        wait_random_max=1000,
+        stop_max_attempt_number=20,
+        retry_on_exception=lambda exception: not isinstance(
+            exception, IdentifierNotFoundError
+        ),
+    )
     def fetch(self, identifier) -> dict[str, str | bytes | None] | None:
         """
         Fetches the paper by first retrieving the direct link to the pdf.

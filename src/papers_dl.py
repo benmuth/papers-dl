@@ -13,7 +13,7 @@ supported_fetch_identifier_types = ["doi", "pmid", "url", "isbn"]
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.INFO)
 
 
 def save_scihub(identifier: str, out: str, user_agent: str, name: str | None = None):
