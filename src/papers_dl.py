@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def save_scihub(identifier: str, out: str, user_agent: str, name: str | None = None):
+def save_scihub(
+    identifier: str, out: str, user_agent: str, name: str | None = None
+) -> str:
     """
     find a paper with the given identifier and download it to the output
     directory. If given, name will be the name of the output file. otherwise
@@ -28,7 +30,7 @@ def save_scihub(identifier: str, out: str, user_agent: str, name: str | None = N
 
     result = sh.download(identifier, out)
     if not result:
-        return
+        return ""
 
     logging.info(f"Successfully downloaded file with identifier {identifier}")
 
@@ -41,7 +43,7 @@ def save_scihub(identifier: str, out: str, user_agent: str, name: str | None = N
         validation_info = json.loads(result_info["validation_info"])
     except TypeError:
         logging.error("Invalid JSON!")
-        return
+        return ""
 
     title = validation_info.get("title")
 
@@ -51,9 +53,11 @@ def save_scihub(identifier: str, out: str, user_agent: str, name: str | None = N
         new_path = os.path.join(out, file_name)
         os.rename(result_path, new_path)
         logging.info(f"File downloaded to {new_path}")
+        return new_path
+    return result_path
 
 
-def parse(args):
+def parse(args) -> str:
     # if a path isn't passed or is empty, read from stdin
     if not (hasattr(args, "path") and args.path):
         return format_output(parse_ids_from_text(sys.stdin.read(), args.match))
@@ -61,8 +65,12 @@ def parse(args):
     return format_output(parse_file(args.path, args.match), args.format)
 
 
-def fetch(args):
-    save_scihub(args.query, args.output, args.user_agent)
+def fetch(args) -> str:
+    path = save_scihub(args.query, args.output, args.user_agent)
+    if path:
+        return path
+    else:
+        return "No paper found"
 
 
 def main():

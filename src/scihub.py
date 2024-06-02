@@ -13,7 +13,7 @@ import enum
 # log config
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.INFO)
 
 urllib3.disable_warnings()
 
@@ -102,35 +102,38 @@ class SciHub(object):
         Currently, this can potentially be blocked by a captcha if a certain
         limit has been reached.
         """
-        data = self.fetch(identifier)
+        try:
+            data = self.fetch(identifier)
 
-        # TODO: allow for passing in name
-        if data:
-            self._save(
-                data["pdf"],
-                os.path.join(destination, path if path else data["name"]),
-            )
-        return data
+            # TODO: allow for passing in name
+            if data:
+                self._save(
+                    data["pdf"],
+                    os.path.join(destination, path if path else data["name"]),
+                )
+            return data
+        except IdentifierNotFoundError:
+            logger.error(f"Failed to find identifier {identifier}")
 
     @retry(
         wait_random_min=100,
         wait_random_max=1000,
         stop_max_attempt_number=20,
-        retry_on_exception=lambda exception: not isinstance(
-            exception, IdentifierNotFoundError
+        retry_on_exception=lambda e: not (
+            isinstance(e, IdentifierNotFoundError) or isinstance(e, IndexError)
         ),
     )
-    def fetch(self, identifier) -> dict[str, str | bytes | None] | None:
+    def fetch(self, identifier) -> dict | None:
         """
         Fetches the paper by first retrieving the direct link to the pdf.
         If the indentifier is a DOI, PMID, or URL pay-wall, then use Sci-Hub
         to access and download paper. Otherwise, just download paper directly.
         """
-        url = None
+        logger.info(f"Looking for {identifier}")
         try:
             # find the url to the pdf for a given identifier
             url = self._get_direct_url(identifier)
-            logger.info("Found potential source at %s", identifier)
+            logger.info(f"Found potential source at {url}")
 
             # verify=False is dangerous but sci-hub.io
             # requires intermediate certificates to verify
@@ -141,13 +144,18 @@ class SciHub(object):
             res = self.sess.get(url, verify=True)
 
             if res.headers["Content-Type"] != "application/pdf":
-                logger.error(
-                    "Failed to fetch PDF with identifier %s (resolved url %s) due to captcha, changing url...",
-                    identifier,
-                    url,
-                )
-                self._change_base_url()
-                raise CaptchaNeededError("Failed to fetch PDF due to captcha")
+                if res.status_code == 404:
+                    logger.error(
+                        f"Couldn't find PDF with identifier {identifier} at URL {url}, changing base url..."
+                    )
+                    raise SiteAccessError("Couldn't find PDF")
+                else:
+                    logger.error(
+                        "Failed to fetch PDF with identifier %s at URL %s due to captcha, changing base URL...",
+                        identifier,
+                        url,
+                    )
+                    raise CaptchaNeededError("Failed to fetch PDF due to captcha")
             else:
                 return {
                     "pdf": res.content,
@@ -156,15 +164,15 @@ class SciHub(object):
                 }
 
         except Exception as e:
+            if len(self.available_base_url_list) < 1:
+                raise IdentifierNotFoundError
             logger.info(
-                "Cannot access %s: %s, changing url...",
-                self.available_base_url_list[0],
-                e,
+                f"Cannot access source from {self.available_base_url_list[0]}: {e}, changing base URL..."
             )
             self._change_base_url()
             raise SiteAccessError("Failed to access site")
 
-    def _get_direct_url(self, identifier: str) -> str | None:
+    def _get_direct_url(self, identifier: str) -> str:
         """
         Finds the direct source url for a given identifier.
         """
@@ -175,7 +183,7 @@ class SciHub(object):
         else:
             return self._search_direct_url(identifier)
 
-    def _search_direct_url(self, identifier) -> str | None:
+    def _search_direct_url(self, identifier) -> str:
         """
         Sci-Hub embeds papers in an iframe. This function finds the actual
         source url which looks something like https://moscow.sci-hub.io/.../....pdf.
