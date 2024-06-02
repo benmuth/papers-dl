@@ -3,7 +3,7 @@
 
 ## Usage
 ```shell
-# parse certain identifier types from a file:
+# parse DOI identifiers from a file:
 papers-dl parse --match doi --path pages/my-paper.html
 
 # fetch given identifier from SciHub:
