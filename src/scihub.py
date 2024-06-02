@@ -144,18 +144,10 @@ class SciHub(object):
             res = self.sess.get(url, verify=True)
 
             if res.headers["Content-Type"] != "application/pdf":
-                if res.status_code == 404:
-                    logger.error(
-                        f"Couldn't find PDF with identifier {identifier} at URL {url}, changing base url..."
-                    )
-                    raise SiteAccessError("Couldn't find PDF")
-                else:
-                    logger.error(
-                        "Failed to fetch PDF with identifier %s at URL %s due to captcha, changing base URL...",
-                        identifier,
-                        url,
-                    )
-                    raise CaptchaNeededError("Failed to fetch PDF due to captcha")
+                logger.error(
+                    f"Couldn't find PDF with identifier {identifier} at URL {url}, changing base url..."
+                )
+                raise SiteAccessError("Couldn't find PDF")
             else:
                 return {
                     "pdf": res.content,
@@ -165,12 +157,12 @@ class SciHub(object):
 
         except Exception as e:
             if len(self.available_base_url_list) < 1:
-                raise IdentifierNotFoundError
+                raise IdentifierNotFoundError("Ran out of valid SciHub urls")
             logger.info(
                 f"Cannot access source from {self.available_base_url_list[0]}: {e}, changing base URL..."
             )
             self._change_base_url()
-            raise SiteAccessError("Failed to access site")
+            raise SiteAccessError from e
 
     def _get_direct_url(self, identifier: str) -> str:
         """
@@ -229,6 +221,7 @@ class SciHub(object):
         Save a file give data and a path.
         """
         try:
+            logger.info(f"Saving file to {path}")
             with open(path, "wb") as f:
                 f.write(data)
         except Exception as e:
@@ -243,11 +236,8 @@ class SciHub(object):
 
     def _generate_name(self, res):
         """
-        Generate unique filename for paper. Returns a name by calcuating
-        md5 hash of file contents, then appending the last 20 characters
-        of the url which typically provides a good paper identifier.
+        Generate unique filename for paper by calcuating md5 hash of file
+        contents.
         """
-        name = res.url.split("/")[-1]
-        name = re.sub("#view=(.+)", "", name)
         pdf_hash = hashlib.md5(res.content).hexdigest()
-        return "%s-%s" % (pdf_hash, name[-20:])
+        return f"{pdf_hash}" + ".pdf"

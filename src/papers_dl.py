@@ -26,13 +26,13 @@ def save_scihub(
     """
 
     sh = SciHub(user_agent)
-    logging.info(f"Attempting to download from {identifier}")
+    logging.info(f"Attempting to download paper with identifier {identifier}")
 
     result = sh.download(identifier, out)
     if not result:
         return ""
 
-    logging.info(f"Successfully downloaded file with identifier {identifier}")
+    logging.info(f"Successfully downloaded paper with identifier {identifier}")
 
     logging.info("Finding paper title")
     pdf2doi.config.set("verbose", False)
@@ -41,19 +41,19 @@ def save_scihub(
     try:
         result_info = pdf2doi.pdf2doi(result_path)
         validation_info = json.loads(result_info["validation_info"])
-    except TypeError:
-        logging.error("Invalid JSON!")
-        return ""
 
-    title = validation_info.get("title")
+        title = validation_info.get("title")
 
-    file_name = name if name else title
-    if file_name:
-        file_name += ".pdf"
-        new_path = os.path.join(out, file_name)
-        os.rename(result_path, new_path)
-        logging.info(f"File downloaded to {new_path}")
-        return new_path
+        file_name = name if name else title
+        if file_name:
+            file_name += ".pdf"
+            new_path = os.path.join(out, file_name)
+            os.rename(result_path, new_path)
+            logging.info(f"File renamed to {new_path}")
+            return new_path
+    except Exception as e:
+        logging.error(f"Couldn't get paper title from PDF at {result_path}: {e}")
+
     return result_path
 
 
