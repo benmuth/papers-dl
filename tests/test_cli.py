@@ -40,4 +40,5 @@ class TestCLI(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        self.assertIn('{"id": "37265733000", "type": "isbn"}', result.stdout)
+        self.assertIn('{"id": "6419400074", "type": "isbn"}', result.stdout)
+        self.assertIn('{"id": "1558153217", "type": "isbn"}', result.stdout)
