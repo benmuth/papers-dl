@@ -11,10 +11,6 @@ import json
 
 supported_fetch_identifier_types = ["doi", "pmid", "url", "isbn"]
 
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
 
 def save_scihub(
     identifier: str, out: str, user_agent: str, name: str | None = None
@@ -83,7 +79,11 @@ def main():
     from version import __version__
 
     parser.add_argument(
-        "--version", "-v", action="version", version=f"{name} {__version__}"
+        "--version", "-V", action="version", version=f"{name} {__version__}"
+    )
+
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="increase verbosity"
     )
 
     subparsers = parser.add_subparsers()
@@ -150,6 +150,12 @@ def main():
     parser_parse.set_defaults(func=parse)
 
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.basicConfig(level=logging.INFO)
+    else:
+        logging.basicConfig(level=logging.ERROR)
+
     print(args.func(args))
 
 

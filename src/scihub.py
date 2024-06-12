@@ -10,11 +10,6 @@ from retrying import retry
 
 import enum
 
-# log config
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
 urllib3.disable_warnings()
 
 # URL-DIRECT - openly accessible paper
@@ -27,7 +22,7 @@ DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKi
 
 
 class IdentifierNotFoundError(Exception):
-    "Error for when the identifier wasn't found at any SciHub url"
+    "Error for when the identifier wasn't found at any Sci-Hub url"
 
     pass
 
@@ -42,7 +37,7 @@ class CaptchaNeededError(SiteAccessError):
 
 class SciHub(object):
     """
-    SciHub class can search for papers on Google Scholar
+    Sci-Hub class can search for papers on Google Scholar
     and fetch/download papers from sci-hub.io
     """
 
@@ -57,7 +52,7 @@ class SciHub(object):
 
     def _get_available_scihub_urls(self):
         """
-        Finds available scihub urls via https://sci-hub.now.sh/
+        Finds available Sci-Hub urls via https://sci-hub.now.sh/
         """
 
         # NOTE: This misses some valid URLs. Alternatively, we could parse
@@ -89,16 +84,17 @@ class SciHub(object):
             }
 
     def _change_base_url(self):
-        if not self.available_base_url_list:
-            logger.error("Ran out of valid sci-hub urls")
+        if len(self.available_base_url_list) <= 1:
+            logging.error("Ran out of valid Sci-Hub urls")
             raise IdentifierNotFoundError()
         del self.available_base_url_list[0]
         self.base_url = self.available_base_url_list[0] + "/"
-        logger.info("I'm changing to {}".format(self.available_base_url_list[0]))
+
+        logging.info("Changing URL to {}".format(self.available_base_url_list[0]))
 
     def download(self, identifier, destination="", path=None) -> dict[str, str] | None:
         """
-        Downloads a paper from sci-hub given an indentifier (DOI, PMID, URL).
+        Downloads a paper from Sci-Hub given an indentifier (DOI, PMID, URL).
         Currently, this can potentially be blocked by a captcha if a certain
         limit has been reached.
         """
@@ -113,7 +109,7 @@ class SciHub(object):
                 )
             return data
         except IdentifierNotFoundError:
-            logger.error(f"Failed to find identifier {identifier}")
+            logging.error(f"Failed to find identifier {identifier}")
 
     @retry(
         wait_random_min=100,
@@ -129,13 +125,13 @@ class SciHub(object):
         If the indentifier is a DOI, PMID, or URL pay-wall, then use Sci-Hub
         to access and download paper. Otherwise, just download paper directly.
         """
-        logger.info(f"Looking for {identifier}")
+        logging.info(f"Looking for {identifier}")
         try:
             # find the url to the pdf for a given identifier
             url = self._get_direct_url(identifier)
-            logger.info(f"Found potential source at {url}")
+            logging.info(f"Found potential source at {url}")
 
-            # verify=False is dangerous but sci-hub.io
+            # verify=False is dangerous but Sci-Hub.io
             # requires intermediate certificates to verify
             # and requests doesn't know how to download them.
             # as a hacky fix, you can add them to your store
@@ -144,7 +140,7 @@ class SciHub(object):
             res = self.sess.get(url, verify=True)
 
             if res.headers["Content-Type"] != "application/pdf":
-                logger.error(
+                logging.error(
                     f"Couldn't find PDF with identifier {identifier} at URL {url}, changing base url..."
                 )
                 raise SiteAccessError("Couldn't find PDF")
@@ -157,8 +153,8 @@ class SciHub(object):
 
         except Exception as e:
             if len(self.available_base_url_list) < 1:
-                raise IdentifierNotFoundError("Ran out of valid SciHub urls")
-            logger.info(
+                raise IdentifierNotFoundError("Ran out of valid Sci-Hub urls")
+            logging.info(
                 f"Cannot access source from {self.available_base_url_list[0]}: {e}, changing base URL..."
             )
             self._change_base_url()
@@ -221,11 +217,12 @@ class SciHub(object):
         Save a file give data and a path.
         """
         try:
-            logger.info(f"Saving file to {path}")
+            logging.info(f"Saving file to {path}")
+
             with open(path, "wb") as f:
                 f.write(data)
         except Exception as e:
-            logger.error("Failed to write to %s (%s)", path, e.__str__)
+            logging.error(f"Failed to write to {path} {e}")
             raise e
 
     def _get_soup(self, html):
