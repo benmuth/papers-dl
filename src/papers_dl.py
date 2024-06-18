@@ -156,7 +156,10 @@ def main():
     else:
         logging.basicConfig(level=logging.ERROR)
 
-    print(args.func(args))
+    if hasattr(args, "func"):
+        print(args.func(args))
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":
