@@ -11,9 +11,14 @@ import json
 
 supported_fetch_identifier_types = ["doi", "pmid", "url", "isbn"]
 
+supported_providers = ["sci-hub"]
+
 
 def save_scihub(
-    identifier: str, out: str, user_agent: str, name: str | None = None
+    identifier: str,
+    out: str,
+    user_agent: str | None,
+    name: str | None = None,
 ) -> str:
     """
     find a paper with the given identifier and download it to the output
@@ -61,12 +66,39 @@ def parse(args) -> str:
     return format_output(parse_file(args.path, args.match), args.format)
 
 
-def fetch(args) -> str:
-    path = save_scihub(args.query, args.output, args.user_agent)
-    if path:
-        return path
+provider_functions = {
+    "sci-hub": save_scihub,
+}
+
+
+def fetch(args) -> list[str]:
+    providers = args.providers
+    paths = []
+    if providers == "auto":
+        # TODO: add more providers and return early on success
+        paths.append(save_scihub(args.query, args.output, args.user_agent))
     else:
-        return "No paper found"
+        providers = [x.strip() for x in providers.split(",")]
+        # sh = SciHub()
+        # available_scihub_providers = sh._get_available_scihub_urls()
+
+        for p in providers:
+            # sci-hub.ee in https://sci-hub.ee
+            # matching_providers = {p for a in all_supported_providers if p in a}
+            matching_providers = {sp for sp in supported_providers if p in sp}
+            if len(matching_providers) > 0:
+                print(f"saving with {p}")
+                for mp in matching_providers:
+                    paths.append(
+                        provider_functions[mp](args.query, args.output, args.user_agent)
+                    )
+            else:
+                print(f"Provider {p} is not supported")
+
+    if len(paths) > 0:
+        return paths
+    else:
+        return ["No paper found"]
 
 
 def main():
@@ -106,6 +138,14 @@ def main():
         metavar="path",
         help="optional output directory for downloaded papers",
         default=".",
+        type=str,
+    )
+
+    parser_fetch.add_argument(
+        "-p",
+        "--providers",
+        help="comma separated list of providers to try fetching from",
+        default="auto",
         type=str,
     )
 

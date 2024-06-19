@@ -41,16 +41,17 @@ class SciHub(object):
     and fetch/download papers from sci-hub.io
     """
 
-    def __init__(self, user_agent=DEFAULT_USER_AGENT):
+    def __init__(self, user_agent: str | None = DEFAULT_USER_AGENT):
         self.sess = requests.Session()
-        self.sess.headers = {
-            "User-Agent": user_agent,
-        }
+        if user_agent is not None:
+            self.sess.headers = {
+                "User-Agent": user_agent,
+            }
         self.available_base_url_list = self._get_available_scihub_urls()
 
         self.base_url = self.available_base_url_list[0] + "/"
 
-    def _get_available_scihub_urls(self):
+    def _get_available_scihub_urls(self) -> list[str]:
         """
         Finds available Sci-Hub urls via https://sci-hub.now.sh/
         """
@@ -137,6 +138,7 @@ class SciHub(object):
             # as a hacky fix, you can add them to your store
             # and verifying would work. will fix this later.
             # NOTE(ben): see this SO answer: https://stackoverflow.com/questions/27068163/python-requests-not-handling-missing-intermediate-certificate-only-from-one-mach
+            # verify=True seems to be working okay
             res = self.sess.get(url, verify=True)
 
             if res.headers["Content-Type"] != "application/pdf":
@@ -168,15 +170,9 @@ class SciHub(object):
 
         if id_type == IDClass["URL-DIRECT"]:
             return identifier
-        else:
-            return self._search_direct_url(identifier)
 
-    def _search_direct_url(self, identifier) -> str:
-        """
-        Sci-Hub embeds papers in an iframe. This function finds the actual
-        source url which looks something like https://moscow.sci-hub.io/.../....pdf.
-        """
-
+        # Sci-Hub embeds papers in an iframe. This finds the actual source url
+        # which looks something like https://moscow.sci-hub.io/.../...pdf.
         while True:
             res = self.sess.get(self.base_url + identifier, verify=True)
             s = self._get_soup(res.content)
@@ -186,11 +182,13 @@ class SciHub(object):
                 src = iframe.get("src")
                 if isinstance(src, list):
                     src = src[0]
+                if not isinstance(src, str):
+                    self._change_base_url()
+                    continue
                 if src.startswith("//"):
                     return "http:" + src
                 else:
                     return src
-
             else:
                 self._change_base_url()
 
