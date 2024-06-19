@@ -92,8 +92,7 @@ class SciHub(object):
 
     def _change_base_url(self):
         if len(self.available_base_url_list) <= 1:
-            logging.error("Ran out of valid Sci-Hub urls")
-            raise IdentifierNotFoundError()
+            raise IdentifierNotFoundError("Ran out of valid Sci-Hub urls")
         del self.available_base_url_list[0]
         self.base_url = self.available_base_url_list[0] + "/"
 
@@ -115,8 +114,8 @@ class SciHub(object):
                     os.path.join(destination, path if path else data["name"]),
                 )
             return data
-        except IdentifierNotFoundError:
-            logging.error(f"Failed to find identifier {identifier}")
+        except IdentifierNotFoundError as infe:
+            logging.error(f"Failed to find identifier {identifier}: {infe}")
 
     @retry(
         wait_random_min=100,
@@ -159,9 +158,9 @@ class SciHub(object):
                     "name": self._generate_name(res),
                 }
 
+        except IdentifierNotFoundError:
+            raise
         except Exception as e:
-            if len(self.available_base_url_list) < 1:
-                raise IdentifierNotFoundError("Ran out of valid Sci-Hub urls")
             logging.info(
                 f"Cannot access source from {self.available_base_url_list[0]}: {e}, changing base URL..."
             )
