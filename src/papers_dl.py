@@ -6,6 +6,7 @@ import logging
 
 from scihub import SciHub
 from parse import parse_file, format_output, parse_ids_from_text, id_patterns
+
 import pdf2doi
 import json
 
@@ -17,16 +18,23 @@ supported_providers = ["sci-hub"]
 def save_scihub(
     identifier: str,
     out: str,
-    user_agent: str | None,
+    base_urls: list[str] | None = None,
+    user_agent: str | None = None,
     name: str | None = None,
 ) -> str:
     """
-    find a paper with the given identifier and download it to the output
-    directory. If given, name will be the name of the output file. otherwise
-    we attempt to find a title from the PDF contents.
+    Find a paper with the given identifier and download it to the output
+    directory.
+
+    If given, name will be the name of the output file. Otherwise we attempt to
+    find a title from the PDF contents. If no name is found, one is generated
+    from a hash of the contents.
+
+    base_urls is an optional list of SciHub urls to search. If not given, it
+    will default to searching all SciHub mirrors it can find.
     """
 
-    sh = SciHub(user_agent)
+    sh = SciHub(base_urls, user_agent)
     logging.info(f"Attempting to download paper with identifier {identifier}")
 
     result = sh.download(identifier, out)
@@ -58,7 +66,7 @@ def save_scihub(
     return result_path
 
 
-def parse(args) -> str:
+def parse_ids(args) -> str:
     # if a path isn't passed or is empty, read from stdin
     if not (hasattr(args, "path") and args.path):
         return format_output(parse_ids_from_text(sys.stdin.read(), args.match))
@@ -71,34 +79,63 @@ provider_functions = {
 }
 
 
+def match_available_providers(providers, available_providers) -> list[str]:
+    matching_providers = []
+    for p in providers:
+        matching_providers.extend([s for s in available_providers if p in s])
+    return matching_providers
+
+
 def fetch(args) -> list[str]:
     providers = args.providers
     paths = []
+
     if providers == "auto":
         # TODO: add more providers and return early on success
-        paths.append(save_scihub(args.query, args.output, args.user_agent))
+        paths.append(save_scihub(args.query, args.output, user_agent=args.user_agent))
     else:
+        supported_providers = list(provider_functions.keys())
         providers = [x.strip() for x in providers.split(",")]
-        # sh = SciHub()
-        # available_scihub_providers = sh._get_available_scihub_urls()
 
-        for p in providers:
-            # sci-hub.ee in https://sci-hub.ee
-            # matching_providers = {p for a in all_supported_providers if p in a}
-            matching_providers = {sp for sp in supported_providers if p in sp}
-            if len(matching_providers) > 0:
-                print(f"saving with {p}")
-                for mp in matching_providers:
-                    paths.append(
-                        provider_functions[mp](args.query, args.output, args.user_agent)
-                    )
-            else:
-                print(f"Provider {p} is not supported")
+        matching_providers = match_available_providers(providers, supported_providers)
+        for mp in matching_providers:
+            paths.append(
+                provider_functions[mp](
+                    args.query,
+                    args.output,
+                    user_agent=args.user_agent,
+                )
+            )
 
-    if len(paths) > 0:
+        matching_scihub_urls = []
+        # if scihub is given, we don't need to find matching urls
+        if "scihub" not in providers:
+            sh = SciHub()
+            available_scihub_providers = sh.available_base_url_list
+            matching_scihub_urls = match_available_providers(
+                providers, available_scihub_providers
+            )
+
+        # if we have specific URLs, just search those
+        results = []
+        if len(matching_scihub_urls) > 0:
+            results = save_scihub(
+                args.query,
+                args.output,
+                base_urls=matching_scihub_urls,
+                user_agent=args.user_agent,
+            )
+        else:
+            results = save_scihub(
+                args.query,
+                args.output,
+                user_agent=args.user_agent,
+            )
+
+        paths.extend([r for r in results if len(r) > 0])
         return paths
-    else:
-        return ["No paper found"]
+
+    return paths
 
 
 def main():
@@ -187,7 +224,7 @@ def main():
     )
 
     parser_fetch.set_defaults(func=fetch)
-    parser_parse.set_defaults(func=parse)
+    parser_parse.set_defaults(func=parse_ids)
 
     args = parser.parse_args()
 

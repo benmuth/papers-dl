@@ -41,13 +41,19 @@ class SciHub(object):
     and fetch/download papers from sci-hub.io
     """
 
-    def __init__(self, user_agent: str | None = DEFAULT_USER_AGENT):
+    def __init__(
+        self,
+        base_urls: list[str] | None = None,
+        user_agent: str | None = DEFAULT_USER_AGENT,
+    ):
         self.sess = requests.Session()
         if user_agent is not None:
             self.sess.headers = {
                 "User-Agent": user_agent,
             }
-        self.available_base_url_list = self._get_available_scihub_urls()
+        self.available_base_url_list = (
+            base_urls if base_urls else self._get_available_scihub_urls()
+        )
 
         self.base_url = self.available_base_url_list[0] + "/"
 
