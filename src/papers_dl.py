@@ -80,9 +80,14 @@ provider_functions = {
 
 
 def match_available_providers(providers, available_providers) -> list[str]:
+    "Find the providers that are included in available_providers"
     matching_providers = []
-    for p in providers:
-        matching_providers.extend([s for s in available_providers if p in s])
+    for provider in providers:
+        for available_provider in available_providers:
+            # a user-supplied provider might be a substring of a supported
+            # provider
+            if provider in available_provider:
+                matching_providers.append(available_provider)
     return matching_providers
 
 
@@ -234,7 +239,11 @@ def main():
         logging.basicConfig(level=logging.ERROR)
 
     if hasattr(args, "func"):
-        print(args.func(args))
+        result = args.func(args)
+        if result:
+            print(result)
+        else:
+            print("No papers found")
     else:
         parser.print_help()
 
