@@ -1,69 +1,19 @@
 import argparse
-import os
-import sys
 import logging
 
+import sys
+from typing import Iterable
 
-from scihub import SciHub
-from parse import parse_file, format_output, parse_ids_from_text, id_patterns
-
-import pdf2doi
-import json
+from parse import format_output, id_patterns, parse_file, parse_ids_from_text
+from scihub import SciHub, save_scihub
+from scidb import save_scidb
 
 supported_fetch_identifier_types = ["doi", "pmid", "url", "isbn"]
 
-supported_providers = ["sci-hub"]
-
-
-def save_scihub(
-    identifier: str,
-    out: str,
-    base_urls: list[str] | None = None,
-    user_agent: str | None = None,
-    name: str | None = None,
-) -> str:
-    """
-    Find a paper with the given identifier and download it to the output
-    directory.
-
-    If given, name will be the name of the output file. Otherwise we attempt to
-    find a title from the PDF contents. If no name is found, one is generated
-    from a hash of the contents.
-
-    base_urls is an optional list of SciHub urls to search. If not given, it
-    will default to searching all SciHub mirrors it can find.
-    """
-
-    sh = SciHub(base_urls, user_agent)
-    logging.info(f"Attempting to download paper with identifier {identifier}")
-
-    result = sh.download(identifier, out)
-    if not result:
-        return ""
-
-    logging.info(f"Successfully downloaded paper with identifier {identifier}")
-
-    logging.info("Finding paper title")
-    pdf2doi.config.set("verbose", False)
-    result_path = os.path.join(out, result["name"])
-
-    try:
-        result_info = pdf2doi.pdf2doi(result_path)
-        validation_info = json.loads(result_info["validation_info"])
-
-        title = validation_info.get("title")
-
-        file_name = name if name else title
-        if file_name:
-            file_name += ".pdf"
-            new_path = os.path.join(out, file_name)
-            os.rename(result_path, new_path)
-            logging.info(f"File renamed to {new_path}")
-            return new_path
-    except Exception as e:
-        logging.error(f"Couldn't get paper title from PDF at {result_path}: {e}")
-
-    return result_path
+provider_functions = {
+    "sci-hub": save_scihub,
+    "scidb": save_scidb,
+}
 
 
 def parse_ids(args) -> str:
@@ -74,18 +24,17 @@ def parse_ids(args) -> str:
     return format_output(parse_file(args.path, args.match), args.format)
 
 
-provider_functions = {
-    "sci-hub": save_scihub,
-}
-
-
-def match_available_providers(providers, available_providers) -> list[str]:
+def match_available_providers(
+    providers, available_providers: Iterable[str] | None = None
+) -> list[str]:
     "Find the providers that are included in available_providers"
+    if not available_providers:
+        available_providers = provider_functions.keys()
     matching_providers = []
     for provider in providers:
         for available_provider in available_providers:
             # a user-supplied provider might be a substring of a supported
-            # provider
+            # provider (sci-hub.ee instead of https://sci-hub.ee)
             if provider in available_provider:
                 matching_providers.append(available_provider)
     return matching_providers
@@ -97,12 +46,14 @@ def fetch(args) -> list[str]:
 
     if providers == "auto":
         # TODO: add more providers and return early on success
+        paths.append(save_scidb(args.query, args.output, user_agent=args.user_agent))
         paths.append(save_scihub(args.query, args.output, user_agent=args.user_agent))
     else:
-        supported_providers = list(provider_functions.keys())
         providers = [x.strip() for x in providers.split(",")]
+        logging.info(f"given providers: {providers}")
 
-        matching_providers = match_available_providers(providers, supported_providers)
+        matching_providers = match_available_providers(providers)
+        logging.info(f"matching providers: {providers}")
         for mp in matching_providers:
             paths.append(
                 provider_functions[mp](
@@ -112,32 +63,33 @@ def fetch(args) -> list[str]:
                 )
             )
 
-        matching_scihub_urls = []
-        # if scihub is given, we don't need to find matching urls
-        if "scihub" not in providers:
+        result_path = ""
+        # if the catch-all "scihub" provider isn't given, we look for specific
+        # Sci-Hub urls
+        # if we find specific SciHub URLs in the user input, only search those
+        if "scihub" in providers:
+            result_path = save_scihub(
+                args.query,
+                args.output,
+                user_agent=args.user_agent,
+            )
+        else:
             sh = SciHub()
             available_scihub_providers = sh.available_base_url_list
             matching_scihub_urls = match_available_providers(
                 providers, available_scihub_providers
             )
+            logging.info(f"matching scihub urls: {matching_scihub_urls}")
+            if len(matching_scihub_urls) > 0:
+                result_path = save_scihub(
+                    args.query,
+                    args.output,
+                    base_urls=matching_scihub_urls,
+                    user_agent=args.user_agent,
+                )
 
-        # if we have specific URLs, just search those
-        results = []
-        if len(matching_scihub_urls) > 0:
-            results = save_scihub(
-                args.query,
-                args.output,
-                base_urls=matching_scihub_urls,
-                user_agent=args.user_agent,
-            )
-        else:
-            results = save_scihub(
-                args.query,
-                args.output,
-                user_agent=args.user_agent,
-            )
-
-        paths.extend([r for r in results if len(r) > 0])
+        if len(result_path) > 0:
+            paths.append(result_path)
         return paths
 
     return paths

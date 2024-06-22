@@ -12,12 +12,11 @@ class TestParser(unittest.TestCase):
         cls.valid_id_types = id_patterns.keys()
         for id_type in target_ids:
             if id_type not in cls.valid_id_types:
-                print(f"Skipping testing for {id_type} parsing!")
+                print(f"Skipping testing for {id_type} parsing")
 
     def test_parse_text(self):
-        """
-        Test to parse identifiers from a set of files.
-        """
+        "Test to parse identifiers from a set of files."
+
         # NOTE: this test does not fail on false positive matches
         # for file in test_document_ids:
         for file in test_document_ids:

@@ -4,13 +4,14 @@ import json
 
 # from https://isbn-checker.netlify.app
 def valid_isbn(subject):
-    # Regular expression to match ISBN
-    regex = re.compile(
+    "Check if the subject is a valid ISBN"
+
+    isbn_regex = re.compile(
         r"^(?:ISBN(?:-1[03])?:? )?(?=[0-9X]{10}$|(?=(?:[0-9]+[- ]){3})[- 0-9X]{13}$|97[89][0-9]{10}$|(?=(?:[0-9]+[- ]){4})[- 0-9]{17}$)(?:97[89][- ]?)?[0-9]{1,5}[- ]?[0-9]+[- ]?[0-9]+[- ]?[0-9X]$"
     )
 
     # Check if the subject matches the ISBN pattern
-    if regex.match(subject):
+    if isbn_regex.match(subject):
         chars = re.sub(r"[- ]|^ISBN(?:-1[03])?:?", "", subject)
         chars = list(chars)
         last = chars.pop()
@@ -71,8 +72,8 @@ def parse_ids_from_text(
     s: str, id_types: list[str] | None = None
 ) -> list[dict[str, str]]:
     """
-    Find all matches for the given id types in s. If id_types isn't given,
-    defaults to the types in id_patterns.
+    Find all matches for the given id types in a string. If id_types isn't
+    given, defaults to the types in id_patterns.
     """
 
     # we look for all ID patterns by default

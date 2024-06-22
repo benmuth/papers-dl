@@ -1,14 +1,67 @@
-import re
+import enum
 import hashlib
 import logging
 import os
+import re
+from pdf2doi import pdf2doi
+import json
 
 import requests
 import urllib3
 from bs4 import BeautifulSoup
 from retrying import retry
 
-import enum
+
+def save_scihub(
+    identifier: str,
+    out: str,
+    base_urls: list[str] | None = None,
+    user_agent: str | None = None,
+    name: str | None = None,
+) -> str:
+    """
+    Find a paper with the given identifier and download it to the output
+    directory.
+
+    If given, name will be the name of the output file. Otherwise we attempt to
+    find a title from the PDF contents. If no name is found, one is generated
+    from a hash of the contents.
+
+    base_urls is an optional list of SciHub urls to search. If not given, it
+    will default to searching all SciHub mirrors it can find.
+    """
+
+    sh = SciHub(base_urls, user_agent)
+    logging.info(f"Attempting to download paper with identifier {identifier}")
+
+    result = sh.download(identifier, out)
+    if not result:
+        return ""
+
+    logging.info(f"Successfully downloaded paper with identifier {identifier}")
+
+    logging.info("Finding paper title")
+    pdf2doi.config.set("verbose", False)
+    result_path = os.path.join(out, result["name"])
+
+    try:
+        result_info = pdf2doi.pdf2doi(result_path)
+        validation_info = json.loads(result_info["validation_info"])
+
+        title = validation_info.get("title")
+
+        file_name = name if name else title
+        if file_name:
+            file_name += ".pdf"
+            new_path = os.path.join(out, file_name)
+            os.rename(result_path, new_path)
+            logging.info(f"File renamed to {new_path}")
+            return new_path
+    except Exception as e:
+        logging.error(f"Couldn't get paper title from PDF at {result_path}: {e}")
+
+    return result_path
+
 
 urllib3.disable_warnings()
 
