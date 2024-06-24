@@ -9,48 +9,10 @@ import os
 URL = "https://annas-archive.org/scidb/"
 
 
-def find_pdf_url(html_content):
-    s = BeautifulSoup(html_content, "html.parser")
-
-    # look for a dynamically loaded PDF (scidb)
-    script_element = s.find("script", string=re.compile("PDFObject.embed"))
-
-    if script_element:
-        match = re.search(r'PDFObject\.embed\("([^"]+)"', script_element.string)
-        if match:
-            return match.group(1)
-
-    # look for the "<embed>" element (scihub)
-    embed_element = s.find("embed", {"id": "pdf", "type": "application/pdf"})
-
-    direct_url = None
-    if embed_element:
-        direct_url = embed_element["src"]
-    if direct_url:
-        return direct_url
-
-    # look for an iframe
-    iframe = s.find("iframe", {"type": "application/pdf"})
-
-    src = None
-    if iframe:
-        src = iframe.get("src")
-        if isinstance(src, list):
-            src = src[0]
-        if src.startswith("//"):
-            direct_url = "http:" + src
-        else:
-            direct_url = src
-    if direct_url:
-        return direct_url
-
-    return None
-
-
 def fetch(identifier, session: requests.Session):
     full_url = URL + identifier
     res = session.get(url=full_url, verify=True)
-    pdf_url = find_pdf_url(res.content)
+    pdf_url = fetch_utils.find_pdf_url(res.content)
     print(f"full url: {full_url}")
     if pdf_url:
         result = session.get(pdf_url, verify=True)
@@ -69,7 +31,7 @@ doi_regexes = [
 
 
 # TODO: deduplicate with parse.parse_ids_from_text
-# this is only here because of errors importing
+# this is only here because of importing errors
 def parse_doi_from_text(s: str) -> list[dict[str, str]]:
     seen = set()
     matches = []

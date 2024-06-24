@@ -1,8 +1,7 @@
 import unittest
 
-import requests
 
-from src.scidb import fetch, find_pdf_url
+from src.fetch_utils import find_pdf_url
 
 # test_dir = "tests/"
 

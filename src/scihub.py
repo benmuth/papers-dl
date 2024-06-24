@@ -42,7 +42,7 @@ def save_scihub(
 
     logging.info(f"Successfully downloaded paper with identifier {identifier}")
 
-    path = fetch_utils.rename(out, result["path"], name)
+    path = fetch_utils.rename(out, os.path.join(out, result["name"]), name)
 
     return path
 
@@ -190,7 +190,7 @@ class SciHub(object):
                 return {
                     "pdf": res.content,
                     "url": url,
-                    "name": self._generate_name(res),
+                    "name": fetch_utils.generate_name(res),
                 }
 
         except IdentifierNotFoundError:
@@ -215,22 +215,15 @@ class SciHub(object):
         # which looks something like https://moscow.sci-hub.io/.../...pdf.
         while True:
             res = self.sess.get(self.base_url + identifier, verify=True)
-            s = self._get_soup(res.content)
-            iframe = s.find("iframe")
+            path = fetch_utils.find_pdf_url(res.content)
 
-            if iframe:
-                src = iframe.get("src")
-                if isinstance(src, list):
-                    src = src[0]
-                if not isinstance(src, str):
-                    self._change_base_url()
-                    continue
-                if src.startswith("//"):
-                    return "http:" + src
-                else:
-                    return src
-            else:
-                self._change_base_url()
+            if isinstance(path, list):
+                path = path[0]
+            if isinstance(path, str) and path.startswith("//"):
+                return "https:" + path
+            if isinstance(path, str) and path.startswith("/"):
+                return self.base_url + path
+            self._change_base_url()
 
     def _classify(self, identifier) -> IDClass:
         """
@@ -268,11 +261,3 @@ class SciHub(object):
         Return html soup.
         """
         return BeautifulSoup(html, "html.parser")
-
-    def _generate_name(self, res):
-        """
-        Generate unique filename for paper by calcuating md5 hash of file
-        contents.
-        """
-        pdf_hash = hashlib.md5(res.content).hexdigest()
-        return f"{pdf_hash}" + ".pdf"
