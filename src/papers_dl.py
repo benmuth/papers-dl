@@ -84,11 +84,11 @@ def fetch(args) -> list[str]:
                 result_path = save_scihub(
                     args.query,
                     args.output,
-                    base_urls=matching_scihub_urls,
                     user_agent=args.user_agent,
+                    base_urls=matching_scihub_urls,
                 )
 
-        if len(result_path) > 0:
+        if result_path:
             paths.append(result_path)
         return paths
 

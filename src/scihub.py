@@ -11,6 +11,8 @@ import urllib3
 from bs4 import BeautifulSoup
 from retrying import retry
 
+import fetch_utils as fetch_utils
+
 
 def save_scihub(
     identifier: str,
@@ -18,7 +20,7 @@ def save_scihub(
     base_urls: list[str] | None = None,
     user_agent: str | None = None,
     name: str | None = None,
-) -> str:
+) -> str | None:
     """
     Find a paper with the given identifier and download it to the output
     directory.
@@ -36,31 +38,13 @@ def save_scihub(
 
     result = sh.download(identifier, out)
     if not result:
-        return ""
+        return None
 
     logging.info(f"Successfully downloaded paper with identifier {identifier}")
 
-    logging.info("Finding paper title")
-    pdf2doi.config.set("verbose", False)
-    result_path = os.path.join(out, result["name"])
+    path = fetch_utils.rename(out, result["path"], name)
 
-    try:
-        result_info = pdf2doi.pdf2doi(result_path)
-        validation_info = json.loads(result_info["validation_info"])
-
-        title = validation_info.get("title")
-
-        file_name = name if name else title
-        if file_name:
-            file_name += ".pdf"
-            new_path = os.path.join(out, file_name)
-            os.rename(result_path, new_path)
-            logging.info(f"File renamed to {new_path}")
-            return new_path
-    except Exception as e:
-        logging.error(f"Couldn't get paper title from PDF at {result_path}: {e}")
-
-    return result_path
+    return path
 
 
 urllib3.disable_warnings()

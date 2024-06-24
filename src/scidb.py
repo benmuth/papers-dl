@@ -1,9 +1,10 @@
+import re
+
+import fetch_utils
 import requests
 from bs4 import BeautifulSoup
 from pdf2doi import pdf2doi
-
-import re
-# from parse import parse_ids_from_text
+import os
 
 URL = "https://annas-archive.org/scidb/"
 
@@ -68,6 +69,7 @@ doi_regexes = [
 
 
 # TODO: deduplicate with parse.parse_ids_from_text
+# this is only here because of errors importing
 def parse_doi_from_text(s: str) -> list[dict[str, str]]:
     seen = set()
     matches = []
@@ -79,16 +81,22 @@ def parse_doi_from_text(s: str) -> list[dict[str, str]]:
     return matches
 
 
-def save_scidb(identifier: str, out: str, user_agent: str | None = None):
+def save_scidb(identifier, out, user_agent=None, name=None):
     sess = requests.Session()
+    if user_agent is not None:
+        sess.headers = {
+            "User-Agent": user_agent,
+        }
 
-    path = "out.pdf"  # TODO: get name
-    # is_doi = parse_ids_from_text(identifier, ["doi"])
+    # scidb only accepts DOI
     is_doi = parse_doi_from_text(identifier)
+    # TODO: add exception handling
     if is_doi:
         result = fetch(identifier, sess)
+        path = os.path.join(out, fetch_utils.generate_name(result))
         if result:
             with open(path, "wb") as f:
                 f.write(result)
-            return path
+            new_path = fetch_utils.rename(out, path, name)
+            return new_path
     raise Exception(f"identifer {identifier} source not found")
