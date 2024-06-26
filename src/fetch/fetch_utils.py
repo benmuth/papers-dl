@@ -8,6 +8,20 @@ import pdf2doi
 from bs4 import BeautifulSoup
 
 
+def save(data, path):
+    """
+    Save a file give data and a path.
+    """
+    try:
+        logging.info(f"Saving file to {path}")
+
+        with open(path, "wb") as f:
+            f.write(data)
+    except Exception as e:
+        logging.error(f"Failed to write to {path} {e}")
+        raise e
+
+
 def find_pdf_url(html_content) -> str | None:
     """
     Given HTML content, find an embedded link to a PDF. Returns None if

@@ -1,17 +1,16 @@
 import argparse
 import logging
-
 import sys
 from typing import Iterable
 
-from parse import format_output, id_patterns, parse_file, parse_ids_from_text
-from scihub import SciHub, save_scihub
-from scidb import save_scidb
+from parse.parse import format_output, id_patterns, parse_file, parse_ids_from_text
+from providers.scidb import save_scidb
+from providers.scihub import SciHub, save_scihub
 
 supported_fetch_identifier_types = ["doi", "pmid", "url", "isbn"]
 
 provider_functions = {
-    "sci-hub": save_scihub,
+    "scihub": save_scihub,
     "scidb": save_scidb,
 }
 
@@ -53,7 +52,7 @@ def fetch(args) -> list[str]:
         logging.info(f"given providers: {providers}")
 
         matching_providers = match_available_providers(providers)
-        logging.info(f"matching providers: {providers}")
+        logging.info(f"matching providers: {matching_providers}")
         for mp in matching_providers:
             paths.append(
                 provider_functions[mp](
@@ -63,19 +62,12 @@ def fetch(args) -> list[str]:
                 )
             )
 
-        result_path = ""
+        result_path = None
         # if the catch-all "scihub" provider isn't given, we look for specific
         # Sci-Hub urls
-        # if we find specific SciHub URLs in the user input, only search those
-        if "scihub" in providers:
-            result_path = save_scihub(
-                args.query,
-                args.output,
-                user_agent=args.user_agent,
-            )
-        else:
-            sh = SciHub()
-            available_scihub_providers = sh.available_base_url_list
+        # if we find specific Sci-Hub URLs in the user input, only search those
+        if "scihub" not in providers:
+            available_scihub_providers = SciHub.get_available_scihub_urls()
             matching_scihub_urls = match_available_providers(
                 providers, available_scihub_providers
             )

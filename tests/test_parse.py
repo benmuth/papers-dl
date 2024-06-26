@@ -1,6 +1,7 @@
-from src.parse import parse_ids_from_text, id_patterns
-import unittest
 import os
+import unittest
+
+from parse import parse
 
 target_ids = ("doi", "pmid", "isbn", "issn", "url")
 
@@ -9,7 +10,7 @@ class TestParser(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.test_material_dir = "tests/identifiers"
-        cls.valid_id_types = id_patterns.keys()
+        cls.valid_id_types = parse.id_patterns.keys()
         for id_type in target_ids:
             if id_type not in cls.valid_id_types:
                 print(f"Skipping testing for {id_type} parsing")
@@ -24,14 +25,14 @@ class TestParser(unittest.TestCase):
             with open(os.path.join(TestParser.test_material_dir, file)) as f:
                 file_content = f.read()
 
-            parsed_results = parse_ids_from_text(file_content)
+            parsed_results = parse.parse_ids_from_text(file_content)
 
             # just include the matching id, not the type
             parsed_results = [result["id"] for result in parsed_results]
 
             expected_ids = []
             for type in test_document_ids:
-                if type in id_patterns:
+                if type in parse.id_patterns:
                     for id in test_document_ids[file][type]:
                         expected_ids.append(id)
 

@@ -1,7 +1,6 @@
 import unittest
 
-
-from src.fetch_utils import find_pdf_url
+from fetch.fetch_utils import find_pdf_url
 
 # test_dir = "tests/"
 

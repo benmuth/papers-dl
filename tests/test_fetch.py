@@ -1,5 +1,6 @@
-from src.scihub import SciHub
 import unittest
+
+from src.providers.scihub import SciHub
 
 
 class TestSciHub(unittest.TestCase):
@@ -12,7 +13,6 @@ class TestSciHub(unittest.TestCase):
         """
         urls = self.scihub.available_base_url_list
         self.assertIsNotNone(urls, "Failed to find Sci-Hub domains")
-        print(f"number of candidate urls: {len(urls)}")
 
     # NOTE: This test is flaky. Retrieval doesn't work consistently
     # def test_fetch(self):

@@ -1,10 +1,10 @@
+import os
 import re
 
-import fetch_utils
+import fetch.fetch_utils as fetch_utils
 import requests
 from bs4 import BeautifulSoup
 from pdf2doi import pdf2doi
-import os
 
 URL = "https://annas-archive.org/scidb/"
 

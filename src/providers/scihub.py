@@ -1,17 +1,16 @@
 import enum
 import hashlib
+import json
 import logging
 import os
 import re
-from pdf2doi import pdf2doi
-import json
 
 import requests
 import urllib3
 from bs4 import BeautifulSoup
+from fetch import fetch_utils
+from pdf2doi import pdf2doi
 from retrying import retry
-
-import fetch_utils as fetch_utils
 
 
 def save_scihub(
@@ -29,8 +28,8 @@ def save_scihub(
     find a title from the PDF contents. If no name is found, one is generated
     from a hash of the contents.
 
-    base_urls is an optional list of SciHub urls to search. If not given, it
-    will default to searching all SciHub mirrors it can find.
+    base_urls is an optional list of Sci-Hub urls to search. If not given, it
+    will default to searching all Sci-Hub mirrors it can find.
     """
 
     sh = SciHub(base_urls, user_agent)
@@ -87,12 +86,13 @@ class SciHub(object):
                 "User-Agent": user_agent,
             }
         self.available_base_url_list = (
-            base_urls if base_urls else self._get_available_scihub_urls()
+            base_urls if base_urls else SciHub.get_available_scihub_urls()
         )
 
         self.base_url = self.available_base_url_list[0] + "/"
 
-    def _get_available_scihub_urls(self) -> list[str]:
+    @staticmethod
+    def get_available_scihub_urls() -> list[str]:
         """
         Finds available Sci-Hub urls via https://sci-hub.now.sh/
         """
@@ -104,7 +104,7 @@ class SciHub(object):
         scihub_domain = re.compile(r"^http[s]*://sci.hub", flags=re.IGNORECASE)
         urls = []
         res = requests.get("https://sci-hub.now.sh/")
-        s = self._get_soup(res.content)
+        s = BeautifulSoup(res.content, "html.parser")
         text_matches = s.find_all("a", href=True, string=re.compile(scihub_domain))
         href_matches = s.find_all("a", re.compile(scihub_domain), href=True)
         full_match_set = set(text_matches) | set(href_matches)
@@ -144,7 +144,7 @@ class SciHub(object):
 
             # TODO: allow for passing in name
             if data:
-                self._save(
+                fetch_utils.save(
                     data["pdf"],
                     os.path.join(destination, path if path else data["name"]),
                 )
@@ -211,8 +211,8 @@ class SciHub(object):
         if id_type == IDClass["URL-DIRECT"]:
             return identifier
 
-        # Sci-Hub embeds papers in an iframe. This finds the actual source url
-        # which looks something like https://moscow.sci-hub.io/.../...pdf.
+        # Sci-Hub embeds PDFs in an iframe or similar. This finds the actual
+        # source url which looks something like https://sci-hub.ee/...pdf.
         while True:
             res = self.sess.get(self.base_url + identifier, verify=True)
             path = fetch_utils.find_pdf_url(res.content)
@@ -242,22 +242,3 @@ class SciHub(object):
             return IDClass["PMID"]
         else:
             return IDClass["DOI"]
-
-    def _save(self, data, path):
-        """
-        Save a file give data and a path.
-        """
-        try:
-            logging.info(f"Saving file to {path}")
-
-            with open(path, "wb") as f:
-                f.write(data)
-        except Exception as e:
-            logging.error(f"Failed to write to {path} {e}")
-            raise e
-
-    def _get_soup(self, html):
-        """
-        Return html soup.
-        """
-        return BeautifulSoup(html, "html.parser")
