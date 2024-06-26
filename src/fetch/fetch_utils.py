@@ -64,12 +64,10 @@ def find_pdf_url(html_content) -> str | None:
     return None
 
 
-def generate_name(res):
-    """
-    Generate unique filename for paper by calcuating md5 hash of file
-    contents.
-    """
-    pdf_hash = hashlib.md5(res.content).hexdigest()
+def generate_name(content):
+    "Generate unique filename for paper"
+
+    pdf_hash = hashlib.md5(content).hexdigest()
     return f"{pdf_hash}" + ".pdf"
 
 

@@ -190,7 +190,7 @@ class SciHub(object):
                 return {
                     "pdf": res.content,
                     "url": url,
-                    "name": fetch_utils.generate_name(res),
+                    "name": fetch_utils.generate_name(res.content),
                 }
 
         except IdentifierNotFoundError:
