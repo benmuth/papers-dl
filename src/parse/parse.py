@@ -63,7 +63,7 @@ id_patterns = {
 
 # these can eliminate false positives
 # TODO: remove duplication of validation logic and parsing logic
-id_check_functions = {
+id_validators = {
     "isbn": valid_isbn,
 }
 
@@ -84,9 +84,9 @@ def parse_ids_from_text(
     matches = []
     for id_type in id_types:
         for regex in id_patterns[id_type]:
-            check_function = id_check_functions.get(id_type)
+            validator = id_validators.get(id_type)
             for match in re.findall(regex, s, re.IGNORECASE):
-                valid_id = check_function(match) if check_function else True
+                valid_id = validator(match) if validator else True
                 if match not in seen and valid_id:
                     matches.append({"id": match, "type": id_type})
                 seen.add(match)
