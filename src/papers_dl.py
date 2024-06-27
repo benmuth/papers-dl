@@ -1,8 +1,10 @@
 import argparse
+import asyncio
 import logging
 import sys
 from typing import Iterable
 
+import aiohttp
 from parse.parse import format_output, id_patterns, parse_file, parse_ids_from_text
 from providers.scidb import save_scidb
 from providers.scihub import SciHub, save_scihub
@@ -39,55 +41,68 @@ def match_available_providers(
     return matching_providers
 
 
-def fetch(args) -> list[str]:
+async def fetch(args) -> list[str]:
     providers = args.providers
     paths = []
 
-    if providers == "auto":
-        # TODO: add more providers and return early on success
-        paths.append(save_scidb(args.query, args.output, user_agent=args.user_agent))
-        paths.append(save_scihub(args.query, args.output, user_agent=args.user_agent))
-    else:
-        providers = [x.strip() for x in providers.split(",")]
-        logging.info(f"given providers: {providers}")
+    headers = None
+    if args.user_agent is not None:
+        headers = {
+            "User-Agent": args.user_agent,
+        }
 
-        matching_providers = match_available_providers(providers)
-        logging.info(f"matching providers: {matching_providers}")
-        for mp in matching_providers:
+    async with aiohttp.ClientSession(headers=headers) as session:
+        if providers == "auto":
+            # TODO: add more providers and return early on success
+            paths.append(await save_scidb(session, args.query, args.output))
             paths.append(
-                provider_functions[mp](
+                await save_scihub(
+                    session,
                     args.query,
                     args.output,
-                    user_agent=args.user_agent,
+                    base_urls=await SciHub.get_available_scihub_urls(),
                 )
             )
+        else:
+            providers = [x.strip() for x in providers.split(",")]
+            logging.info(f"given providers: {providers}")
 
-        result_path = None
-        # if the catch-all "scihub" provider isn't given, we look for specific
-        # Sci-Hub urls
-        # if we find specific Sci-Hub URLs in the user input, only search those
-        if "scihub" not in providers:
-            available_scihub_providers = SciHub.get_available_scihub_urls()
-            matching_scihub_urls = match_available_providers(
-                providers, available_scihub_providers
-            )
-            logging.info(f"matching scihub urls: {matching_scihub_urls}")
-            if len(matching_scihub_urls) > 0:
-                result_path = save_scihub(
-                    args.query,
-                    args.output,
-                    user_agent=args.user_agent,
-                    base_urls=matching_scihub_urls,
+            matching_providers = match_available_providers(providers)
+            logging.info(f"matching providers: {matching_providers}")
+            for mp in matching_providers:
+                paths.append(
+                    await provider_functions[mp](
+                        session,
+                        args.query,
+                        args.output,
+                    )
                 )
 
-        if result_path:
-            paths.append(result_path)
-        return paths
+            result_path = None
+            # if the catch-all "scihub" provider isn't given, we look for specific
+            # Sci-Hub urls
+            # if we find specific Sci-Hub URLs in the user input, only search those
+            if "scihub" not in providers:
+                matching_scihub_urls = match_available_providers(
+                    providers, await SciHub.get_available_scihub_urls()
+                )
+                logging.info(f"matching scihub urls: {matching_scihub_urls}")
+                if len(matching_scihub_urls) > 0:
+                    result_path = await save_scihub(
+                        session,
+                        args.query,
+                        args.output,
+                        base_urls=matching_scihub_urls,
+                    )
+
+            if result_path:
+                paths.append(result_path)
+            return paths
 
     return paths
 
 
-def main():
+async def main():
     name = "papers-dl"
     parser = argparse.ArgumentParser(
         prog=name,
@@ -183,7 +198,10 @@ def main():
         logging.basicConfig(level=logging.ERROR)
 
     if hasattr(args, "func"):
-        result = args.func(args)
+        if asyncio.iscoroutinefunction(args.func):
+            result = await args.func(args)
+        else:
+            result = args.func(args)
         if result:
             print(result)
         else:
@@ -193,4 +211,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

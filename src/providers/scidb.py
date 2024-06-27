@@ -2,21 +2,20 @@ import os
 import re
 
 import fetch.fetch_utils as fetch_utils
-import requests
-from bs4 import BeautifulSoup
-from pdf2doi import pdf2doi
-
-URL = "https://annas-archive.org/scidb/"
+import asyncio
+import aiohttp
 
 
-def fetch(identifier, session: requests.Session):
-    full_url = URL + identifier
-    res = session.get(url=full_url, verify=True)
-    pdf_url = fetch_utils.find_pdf_url(res.content)
-    print(f"full url: {full_url}")
+async def fetch(identifier, session: aiohttp.ClientSession):
+    # full_url = URL + identifier
+    base_url = "https://annas-archive.org/scidb/"
+    async with session.get(url=base_url + identifier) as res:
+        pdf_url = fetch_utils.find_pdf_url(await res.text())
+
+    # print(f"full url: {full_url}")
     if pdf_url:
-        result = session.get(pdf_url, verify=True)
-        return result.content
+        async with session.get(url=pdf_url) as res:
+            return await res.read()
     else:
         return None
 
@@ -43,18 +42,20 @@ def parse_doi_from_text(s: str) -> list[dict[str, str]]:
     return matches
 
 
-def save_scidb(identifier, out, user_agent=None, name=None):
-    sess = requests.Session()
-    if user_agent is not None:
-        sess.headers = {
-            "User-Agent": user_agent,
-        }
-
+async def save_scidb(
+    session: aiohttp.ClientSession,
+    identifier,
+    out,
+    name=None,
+):
     # scidb only accepts DOI
     is_doi = parse_doi_from_text(identifier)
     # TODO: add exception handling
     if is_doi:
-        result = fetch(identifier, sess)
+        result = await fetch(
+            identifier,
+            session,
+        )
         path = os.path.join(out, fetch_utils.generate_name(result))
         if result:
             with open(path, "wb") as f:

@@ -1,11 +1,15 @@
 import unittest
 
+import aiohttp
+import asyncio
+
 from src.providers.scihub import SciHub
 
 
-class TestSciHub(unittest.TestCase):
-    def setUp(self):
-        self.scihub = SciHub()
+class TestSciHub(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        async with aiohttp.ClientSession() as session:
+            self.scihub = SciHub(session, await SciHub.get_available_scihub_urls())
 
     def test_scihub_up(self):
         """
