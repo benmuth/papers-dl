@@ -31,12 +31,13 @@ class TestParser(unittest.TestCase):
             parsed_results = [result["id"] for result in parsed_results]
 
             expected_ids = []
-            for type in test_document_ids:
+            for type in test_document_ids[file]:
                 if type in parse.id_patterns:
                     for id in test_document_ids[file][type]:
                         expected_ids.append(id)
 
             if not expected_ids:
+                print("No expected IDs for this file")
                 continue
 
             for expected_id in expected_ids:
