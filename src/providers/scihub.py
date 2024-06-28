@@ -3,13 +3,12 @@ import enum
 import logging
 import os
 import re
+from urllib.parse import urljoin
 
 import aiohttp
-import urllib3
 from bs4 import BeautifulSoup
 from fetch import fetch_utils
 
-# from retrying import retry
 import random
 
 
@@ -46,8 +45,6 @@ async def save_scihub(
 
     return path
 
-
-urllib3.disable_warnings()
 
 # URL-DIRECT - openly accessible paper
 # URL-NON-DIRECT - pay-walled paper
@@ -100,20 +97,20 @@ class SciHub(object):
         # async with aiohttp.ClientSession() as session:
         async with aiohttp.request("GET", "https://sci-hub.now.sh/") as res:
             s = BeautifulSoup(await res.text(), "html.parser")
-            text_matches = s.find_all(
-                "a",
-                href=True,
-                string=re.compile(scihub_domain),
-            )
-            href_matches = s.find_all(
-                "a",
-                re.compile(scihub_domain),
-                href=True,
-            )
-            full_match_set = set(text_matches) | set(href_matches)
-            for a in full_match_set:
-                if "sci" in a or "sci" in a["href"]:
-                    urls.append(a["href"])
+        text_matches = s.find_all(
+            "a",
+            href=True,
+            string=re.compile(scihub_domain),
+        )
+        href_matches = s.find_all(
+            "a",
+            re.compile(scihub_domain),
+            href=True,
+        )
+        full_match_set = set(text_matches) | set(href_matches)
+        for a in full_match_set:
+            if "sci" in a or "sci" in a["href"]:
+                urls.append(a["href"])
         return urls
 
     def _change_base_url(self):
@@ -193,17 +190,21 @@ class SciHub(object):
 
         # Sci-Hub embeds PDFs in an iframe or similar. This finds the actual
         # source url which looks something like https://sci-hub.ee/...pdf.
-        while True:
-            async with self.sess.get(self.base_url + identifier) as res:
-                path = fetch_utils.find_pdf_url(await res.text())
-
+        aws = [
+            self.sess.get(urljoin(base_url, identifier))
+            for base_url in self.available_base_url_list
+        ]
+        for task in asyncio.as_completed(aws):
+            res = await task
+            path = fetch_utils.find_pdf_url(await res.text())
             if isinstance(path, list):
                 path = path[0]
             if isinstance(path, str) and path.startswith("//"):
                 return "https:" + path
             if isinstance(path, str) and path.startswith("/"):
-                return self.base_url + path
-            self._change_base_url()
+                return urljoin(self.base_url, path)
+
+        raise IdentifierNotFoundError
 
     def _classify(self, identifier) -> IDClass:
         """

@@ -59,11 +59,6 @@ test_document_ids = {
     },
     "reyes-rendering.html": {
         "doi": ["10.1145/37402.37414"],
-        "url": [
-            "https://dl.acm.org/doi/10.1145/3603521.3604289",
-            "https://doi.org/10.1145/3596711.3596742",
-            "https://doi.org/10.1145/37402.37414",
-        ],
     },
     "superscalar-cisc.html": {
         "doi": ["10.1109/HPCA.2006.1598111"],
