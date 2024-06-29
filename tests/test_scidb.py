@@ -1,8 +1,6 @@
 import unittest
 
-from fetch.fetch_utils import find_pdf_url
-
-# test_dir = "tests/"
+from src.parse.parse import find_pdf_url
 
 test_cases = [
     (
@@ -14,13 +12,6 @@ test_cases = [
 
 
 class TestSciDB(unittest.TestCase):
-    # Not sure if we should be making requests to download from scidb in tests
-    # def test_fetch_doi(self):
-    #     sess = requests.Session()
-    #     path = fetch("10.1016/j.cub.2019.11.030", sess)
-    #     # print(path)
-    #     self.assertIsNotNone(path)
-
     def test_find_pdf_in_html(self):
         for file, expected_url in test_cases:
             with open(file, "rt") as f:

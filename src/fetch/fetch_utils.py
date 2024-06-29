@@ -1,11 +1,94 @@
+import asyncio
 import hashlib
 import json
 import logging
 import os
 import re
+from typing import Iterable
 
+import aiohttp
 import pdf2doi
+import providers.scidb as scidb
+import providers.scihub as scihub
 from bs4 import BeautifulSoup
+
+all_providers = [
+    "scihub",
+    "scidb",
+]
+
+
+def match_available_providers(
+    providers, available_providers: Iterable[str] | None = None
+) -> list[str]:
+    "Find the providers that are included in available_providers"
+    if not available_providers:
+        available_providers = all_providers
+    matching_providers = []
+    for provider in providers:
+        for available_provider in available_providers:
+            # a user-supplied provider might be a substring of a supported
+            # provider (sci-hub.ee instead of https://sci-hub.ee)
+            if provider in available_provider:
+                matching_providers.append(available_provider)
+    return matching_providers
+
+
+async def get_urls(session, identifier, providers):
+    urls = []
+    if providers == "all":
+        urls.append(await scidb.get_url(session, identifier))
+        urls.extend(await scihub.get_direct_urls(session, identifier))
+        return urls
+
+    providers = [provider.strip() for provider in providers.split(",")]
+    logging.info(f"given providers: {providers}")
+
+    matching_providers = match_available_providers(providers)
+    logging.info(f"matching providers: {matching_providers}")
+    for mp in matching_providers:
+        if mp == "scihub":
+            urls.extend(await scihub.get_direct_urls(session, identifier))
+        if mp == "scidb":
+            urls.append(await scidb.get_url(session, identifier))
+
+    # if the catch-all "scihub" provider isn't given, we look for
+    # specific Sci-Hub urls. if we find specific Sci-Hub URLs in the
+    # user input, only search those
+    if "scihub" not in providers:
+        matching_scihub_urls = match_available_providers(
+            providers, await scihub.SciHub.get_available_scihub_urls()
+        )
+        logging.info(f"matching scihub urls: {matching_scihub_urls}")
+        if len(matching_scihub_urls) > 0:
+            urls.extend(
+                await scihub.get_direct_urls(
+                    session, identifier, base_urls=matching_scihub_urls
+                )
+            )
+
+    return urls
+
+
+async def fetch(session, identifier, providers):
+    async def get_wrapper(url):
+        try:
+            return await session.get(url)
+        except Exception as e:
+            logging.error("error: %s" % e)
+            return None
+
+    urls = await get_urls(session, identifier, providers)
+
+    logging.info("urls: %s" % urls)
+    tasks = [get_wrapper(url) for url in urls if url]
+    for item in zip(asyncio.as_completed(tasks), urls):
+        res = await item[0]
+        if res is None or res.content_type != "application/pdf":
+            logging.info("couldn't find url at %s" % item[1])
+            continue
+        return await res.read()
+    return None
 
 
 def save(data, path):
@@ -20,50 +103,6 @@ def save(data, path):
     except Exception as e:
         logging.error(f"Failed to write to {path} {e}")
         raise e
-
-
-def find_pdf_url(html_content) -> str | None:
-    """
-    Given HTML content, find an embedded link to a PDF. Returns None if
-    nothing is found
-    """
-
-    s = BeautifulSoup(html_content, "html.parser")
-
-    # look for a dynamically loaded PDF
-    script_element = s.find("script", string=re.compile("PDFObject.embed"))
-
-    if script_element:
-        match = re.search(r'PDFObject\.embed\("([^"]+)"', script_element.string)
-        if match:
-            logging.info(f"found dynamically loaded PDF: {script_element}")
-            return match.group(1)
-
-    # look for the "<embed>" element (scihub)
-    embed_element = s.find("embed", {"id": "pdf", "type": "application/pdf"})
-
-    if embed_element:
-        direct_url = embed_element["src"]
-        if isinstance(direct_url, list):
-            direct_url = direct_url[0]
-        if direct_url:
-            logging.info(f"found embedded PDF: {embed_element}")
-            return direct_url
-
-    # look for an iframe
-    iframe = s.find("iframe", {"type": "application/pdf"})
-
-    if iframe:
-        logging.info(f"found iframe: {iframe}")
-        direct_url = iframe.get("src")
-        if isinstance(direct_url, list):
-            direct_url = direct_url[0]
-        if direct_url:
-            logging.info(f"found iframe: {iframe}")
-            return direct_url
-
-    logging.info("No direct link to PDF found")
-    return None
 
 
 def generate_name(content):

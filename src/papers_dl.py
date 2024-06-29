@@ -1,49 +1,28 @@
 import argparse
 import asyncio
 import logging
+import os
 import sys
-from typing import Iterable
 
 import aiohttp
+from fetch import fetch_utils
 from parse.parse import format_output, id_patterns, parse_file, parse_ids_from_text
-from providers.scidb import save_scidb
-from providers.scihub import SciHub, save_scihub
 
 supported_fetch_identifier_types = ["doi", "pmid", "url", "isbn"]
-
-provider_functions = {
-    "scihub": save_scihub,
-    "scidb": save_scidb,
-}
 
 
 def parse_ids(args) -> str:
     # if a path isn't passed or is empty, read from stdin
     if not (hasattr(args, "path") and args.path):
-        return format_output(parse_ids_from_text(sys.stdin.read(), args.match))
+        return format_output(parse_ids_from_text(sys.stdin.read(), args.query))
 
     return format_output(parse_file(args.path, args.match), args.format)
 
 
-def match_available_providers(
-    providers, available_providers: Iterable[str] | None = None
-) -> list[str]:
-    "Find the providers that are included in available_providers"
-    if not available_providers:
-        available_providers = provider_functions.keys()
-    matching_providers = []
-    for provider in providers:
-        for available_provider in available_providers:
-            # a user-supplied provider might be a substring of a supported
-            # provider (sci-hub.ee instead of https://sci-hub.ee)
-            if provider in available_provider:
-                matching_providers.append(available_provider)
-    return matching_providers
-
-
-async def fetch(args) -> list[str]:
+async def fetch(args):
     providers = args.providers
-    paths = []
+    id = args.query
+    out = args.output
 
     headers = None
     if args.user_agent is not None:
@@ -51,55 +30,19 @@ async def fetch(args) -> list[str]:
             "User-Agent": args.user_agent,
         }
 
-    async with aiohttp.ClientSession(headers=headers) as session:
-        if providers == "all":
-            # TODO: add more providers and return early on success
-            paths.append(await save_scidb(session, args.query, args.output))
-            paths.append(
-                await save_scihub(
-                    session,
-                    args.query,
-                    args.output,
-                    base_urls=await SciHub.get_available_scihub_urls(),
-                )
-            )
-        else:
-            providers = [x.strip() for x in providers.split(",")]
-            logging.info(f"given providers: {providers}")
+    async with aiohttp.ClientSession(headers=headers) as sess:
+        pdf_content = await fetch_utils.fetch(
+            sess,
+            id,
+            providers,
+        )
 
-            matching_providers = match_available_providers(providers)
-            logging.info(f"matching providers: {matching_providers}")
-            for mp in matching_providers:
-                paths.append(
-                    await provider_functions[mp](
-                        session,
-                        args.query,
-                        args.output,
-                    )
-                )
-
-            result_path = None
-            # if the catch-all "scihub" provider isn't given, we look for
-            # specific Sci-Hub urls. if we find specific Sci-Hub URLs in the
-            # user input, only search those
-            if "scihub" not in providers:
-                matching_scihub_urls = match_available_providers(
-                    providers, await SciHub.get_available_scihub_urls()
-                )
-                logging.info(f"matching scihub urls: {matching_scihub_urls}")
-                if len(matching_scihub_urls) > 0:
-                    result_path = await save_scihub(
-                        session,
-                        args.query,
-                        args.output,
-                        base_urls=matching_scihub_urls,
-                    )
-
-            if result_path:
-                paths.append(result_path)
-            return paths
-
-    return paths
+    if pdf_content is None:
+        return None
+    path = os.path.join(out, fetch_utils.generate_name(pdf_content))
+    fetch_utils.save(pdf_content, path)
+    new_path = fetch_utils.rename(out, path)
+    return new_path
 
 
 async def main():

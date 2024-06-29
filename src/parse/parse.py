@@ -1,5 +1,7 @@
 import json
 import re
+import logging
+from bs4 import BeautifulSoup
 
 
 # from https://isbn-checker.netlify.app
@@ -66,6 +68,47 @@ id_patterns = {
 id_validators = {
     "isbn": valid_isbn,
 }
+
+
+def find_pdf_url(html_content) -> str | None:
+    "Given HTML content, find an embedded link to a PDF."
+
+    s = BeautifulSoup(html_content, "html.parser")
+
+    # look for a dynamically loaded PDF
+    script_element = s.find("script", string=re.compile("PDFObject.embed"))
+
+    if script_element:
+        match = re.search(r'PDFObject\.embed\("([^"]+)"', script_element.string)
+        if match:
+            logging.info("found dynamically loaded PDF")
+            return match.group(1)
+
+    # look for the "<embed>" element (scihub)
+    embed_element = s.find("embed", {"id": "pdf", "type": "application/pdf"})
+
+    if embed_element:
+        direct_url = embed_element["src"]
+        if isinstance(direct_url, list):
+            direct_url = direct_url[0]
+        if direct_url:
+            logging.info("found embedded PDF")
+            return direct_url
+
+    # look for an iframe
+    iframe = s.find("iframe", {"type": "application/pdf"})
+
+    if iframe:
+        logging.info(f"found iframe: {iframe}")
+        direct_url = iframe.get("src")
+        if isinstance(direct_url, list):
+            direct_url = direct_url[0]
+        if direct_url:
+            logging.info("found iframe")
+            return direct_url
+
+    logging.info("No direct link to PDF found")
+    return None
 
 
 def parse_ids_from_text(
