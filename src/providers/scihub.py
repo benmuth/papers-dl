@@ -113,14 +113,6 @@ class SciHub(object):
                 urls.append(a["href"])
         return urls
 
-    def _change_base_url(self):
-        if len(self.available_base_url_list) <= 1:
-            raise IdentifierNotFoundError("Ran out of valid Sci-Hub urls")
-        del self.available_base_url_list[0]
-        self.base_url = self.available_base_url_list[0] + "/"
-
-        logging.info("Changing URL to {}".format(self.available_base_url_list[0]))
-
     async def download(
         self, identifier, destination="", path=None
     ) -> dict[str, str] | None:
@@ -149,62 +141,72 @@ class SciHub(object):
         to access and download paper. Otherwise, just download paper directly.
         """
         logging.info(f"Looking for {identifier}")
-        max_attempts = 20
-        for attempt in range(max_attempts):
+
+        direct_urls = await self._get_direct_urls(identifier)
+
+        async def get_wrapper(url):
             try:
-                # find the url to the pdf for a given identifier
-                url = await self._get_direct_url(identifier)
-                logging.info(f"Found potential source at {url}")
+                task = self.sess.get(url)
+                return await task
+            except Exception:
+                return None
 
-                async with self.sess.get(url) as res:
-                    if res.content_type != "application/pdf":
-                        logging.error(
-                            f"Couldn't find PDF with identifier {identifier} at URL {url}, changing base url..."
-                        )
-                        raise SiteAccessError("Couldn't find PDF")
-                    else:
-                        return {
-                            "pdf": await res.read(),
-                            "url": url,
-                            "name": fetch_utils.generate_name(await res.read()),
-                        }
-            except (IdentifierNotFoundError, IndexError):
-                raise
-            except Exception as e:
-                if attempt == max_attempts - 1:
-                    raise IdentifierNotFoundError
-                logging.info(
-                    f"Cannot access source from {self.available_base_url_list[0]}: {e}, changing base URL..."
-                )
-                self._change_base_url()
-                await asyncio.sleep(random.uniform(0.1, 1.0))
+        tasks = [get_wrapper(url) for url in direct_urls]
+        for task in asyncio.as_completed(tasks):
+            res = await task
+            if res is None:
+                print("res is None")
+                continue
+            print("status", res.status)
+            if res.content_type != "application/pdf":
+                print("content type", res.content_type)
+                print("resource is not a pdf")
+                continue
+            return {
+                "pdf": await res.read(),
+                "name": fetch_utils.generate_name(await res.read()),
+            }
+        raise IdentifierNotFoundError
 
-    async def _get_direct_url(self, identifier: str) -> str:
+    async def _get_direct_urls(self, identifier: str) -> list[str]:
         """
         Finds the direct source url for a given identifier.
         """
-        id_type = self._classify(identifier)
 
-        if id_type == IDClass["URL-DIRECT"]:
-            return identifier
+        async def get_wrapper(url):
+            try:
+                task = self.sess.get(url)
+                return await task
+            except Exception:
+                return None
 
-        # Sci-Hub embeds PDFs in an iframe or similar. This finds the actual
-        # source url which looks something like https://sci-hub.ee/...pdf.
-        aws = [
-            self.sess.get(urljoin(base_url, identifier))
-            for base_url in self.available_base_url_list
-        ]
-        for task in asyncio.as_completed(aws):
+        if self._classify(identifier) == IDClass["URL-DIRECT"]:
+            return [identifier]
+
+        async with asyncio.TaskGroup() as tg:
+            tasks = [
+                tg.create_task(get_wrapper(urljoin(base_url, identifier)))
+                for base_url in self.available_base_url_list
+            ]
+
+        direct_urls = []
+        for task in tasks:
             res = await task
+            if res is None:
+                continue
             path = fetch_utils.find_pdf_url(await res.text())
             if isinstance(path, list):
                 path = path[0]
             if isinstance(path, str) and path.startswith("//"):
-                return "https:" + path
-            if isinstance(path, str) and path.startswith("/"):
-                return urljoin(self.base_url, path)
+                direct_urls.append("https:" + path)
+            elif isinstance(path, str) and path.startswith("/"):
+                direct_urls.append(urljoin(self.base_url, path))
 
-        raise IdentifierNotFoundError
+        if not direct_urls:
+            raise IdentifierNotFoundError
+
+        logging.info(f"Found potential sources: {direct_urls}")
+        return list(set(direct_urls))
 
     def _classify(self, identifier) -> IDClass:
         """

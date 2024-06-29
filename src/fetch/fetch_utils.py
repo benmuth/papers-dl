@@ -43,8 +43,9 @@ def find_pdf_url(html_content) -> str | None:
     embed_element = s.find("embed", {"id": "pdf", "type": "application/pdf"})
 
     if embed_element:
-        # direct_url = embed_element["src"]
         direct_url = embed_element["src"]
+        if isinstance(direct_url, list):
+            direct_url = direct_url[0]
         if direct_url:
             logging.info(f"found embedded PDF: {embed_element}")
             return direct_url
@@ -52,10 +53,11 @@ def find_pdf_url(html_content) -> str | None:
     # look for an iframe
     iframe = s.find("iframe", {"type": "application/pdf"})
 
-    # src = None
     if iframe:
         logging.info(f"found iframe: {iframe}")
         direct_url = iframe.get("src")
+        if isinstance(direct_url, list):
+            direct_url = direct_url[0]
         if direct_url:
             logging.info(f"found iframe: {iframe}")
             return direct_url
