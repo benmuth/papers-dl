@@ -52,7 +52,7 @@ async def fetch(args) -> list[str]:
         }
 
     async with aiohttp.ClientSession(headers=headers) as session:
-        if providers == "auto":
+        if providers == "all":
             # TODO: add more providers and return early on success
             paths.append(await save_scidb(session, args.query, args.output))
             paths.append(
@@ -79,9 +79,9 @@ async def fetch(args) -> list[str]:
                 )
 
             result_path = None
-            # if the catch-all "scihub" provider isn't given, we look for specific
-            # Sci-Hub urls
-            # if we find specific Sci-Hub URLs in the user input, only search those
+            # if the catch-all "scihub" provider isn't given, we look for
+            # specific Sci-Hub urls. if we find specific Sci-Hub URLs in the
+            # user input, only search those
             if "scihub" not in providers:
                 matching_scihub_urls = match_available_providers(
                     providers, await SciHub.get_available_scihub_urls()
@@ -146,7 +146,7 @@ async def main():
         "-p",
         "--providers",
         help="comma separated list of providers to try fetching from",
-        default="auto",
+        default="all",
         type=str,
     )
 
@@ -202,6 +202,7 @@ async def main():
             result = await args.func(args)
         else:
             result = args.func(args)
+
         if result:
             print(result)
         else:

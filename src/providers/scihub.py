@@ -146,8 +146,7 @@ class SciHub(object):
 
         async def get_wrapper(url):
             try:
-                task = self.sess.get(url)
-                return await task
+                return await self.sess.get(url)
             except Exception:
                 return None
 
@@ -175,8 +174,7 @@ class SciHub(object):
 
         async def get_wrapper(url):
             try:
-                task = self.sess.get(url)
-                return await task
+                return await self.sess.get(url)
             except Exception:
                 return None
 

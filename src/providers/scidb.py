@@ -6,6 +6,28 @@ import asyncio
 import aiohttp
 
 
+async def save_scidb(
+    session: aiohttp.ClientSession,
+    identifier,
+    out,
+    name=None,
+):
+    # scidb only accepts DOI
+    is_doi = parse_doi_from_text(identifier)
+    # TODO: add exception handling
+    if is_doi:
+        result = await fetch(
+            identifier,
+            session,
+        )
+        path = os.path.join(out, fetch_utils.generate_name(result))
+        if result:
+            fetch_utils.save(result, path)
+            new_path = fetch_utils.rename(out, path, name)
+            return new_path
+    raise Exception(f"identifer {identifier} source not found")
+
+
 async def fetch(identifier, session: aiohttp.ClientSession):
     # full_url = URL + identifier
     base_url = "https://annas-archive.org/scidb/"
@@ -40,26 +62,3 @@ def parse_doi_from_text(s: str) -> list[dict[str, str]]:
                 matches.append({"id": match, "type": "doi"})
             seen.add(match)
     return matches
-
-
-async def save_scidb(
-    session: aiohttp.ClientSession,
-    identifier,
-    out,
-    name=None,
-):
-    # scidb only accepts DOI
-    is_doi = parse_doi_from_text(identifier)
-    # TODO: add exception handling
-    if is_doi:
-        result = await fetch(
-            identifier,
-            session,
-        )
-        path = os.path.join(out, fetch_utils.generate_name(result))
-        if result:
-            with open(path, "wb") as f:
-                f.write(result)
-            new_path = fetch_utils.rename(out, path, name)
-            return new_path
-    raise Exception(f"identifer {identifier} source not found")
