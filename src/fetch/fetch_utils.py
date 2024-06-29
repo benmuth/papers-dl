@@ -3,14 +3,12 @@ import hashlib
 import json
 import logging
 import os
-import re
 from typing import Iterable
 
 import aiohttp
 import pdf2doi
 import providers.scidb as scidb
 import providers.scihub as scihub
-from bs4 import BeautifulSoup
 
 all_providers = [
     "scihub",
