@@ -21,59 +21,35 @@ class IdentifierNotFoundError(Exception):
     pass
 
 
-class SiteAccessError(Exception):
-    pass
-
-
-class CaptchaNeededError(SiteAccessError):
-    pass
-
-
-class SciHub(object):
+async def get_available_scihub_urls() -> list[str]:
     """
-    Sci-Hub class can search for papers on Google Scholar
-    and fetch/download papers from sci-hub.io
+    Finds available Sci-Hub urls via https://sci-hub.now.sh/
     """
 
-    def __init__(
-        self,
-        session: aiohttp.ClientSession,
-        base_urls: list[str],
-    ):
-        self.sess = session
-        self.available_base_url_list = base_urls
-        self.base_url = self.available_base_url_list[0] + "/"
+    # NOTE: This misses some valid URLs. Alternatively, we could parse
+    # the HTML more finely by navigating the parsed DOM, instead of relying
+    # on filtering. That might be more brittle in case the HTML changes.
+    # Generally, we don't need to get all URLs.
+    scihub_domain = re.compile(r"^http[s]*://sci.hub", flags=re.IGNORECASE)
+    urls = []
 
-    @staticmethod
-    async def get_available_scihub_urls() -> list[str]:
-        """
-        Finds available Sci-Hub urls via https://sci-hub.now.sh/
-        """
-
-        # NOTE: This misses some valid URLs. Alternatively, we could parse
-        # the HTML more finely by navigating the parsed DOM, instead of relying
-        # on filtering. That might be more brittle in case the HTML changes.
-        # Generally, we don't need to get all URLs.
-        scihub_domain = re.compile(r"^http[s]*://sci.hub", flags=re.IGNORECASE)
-        urls = []
-        # async with aiohttp.ClientSession() as session:
-        async with aiohttp.request("GET", "https://sci-hub.now.sh/") as res:
-            s = BeautifulSoup(await res.text(), "html.parser")
-        text_matches = s.find_all(
-            "a",
-            href=True,
-            string=re.compile(scihub_domain),
-        )
-        href_matches = s.find_all(
-            "a",
-            re.compile(scihub_domain),
-            href=True,
-        )
-        full_match_set = set(text_matches) | set(href_matches)
-        for a in full_match_set:
-            if "sci" in a or "sci" in a["href"]:
-                urls.append(a["href"])
-        return urls
+    async with aiohttp.request("GET", "https://sci-hub.now.sh/") as res:
+        s = BeautifulSoup(await res.text(), "html.parser")
+    text_matches = s.find_all(
+        "a",
+        href=True,
+        string=re.compile(scihub_domain),
+    )
+    href_matches = s.find_all(
+        "a",
+        re.compile(scihub_domain),
+        href=True,
+    )
+    full_match_set = set(text_matches) | set(href_matches)
+    for a in full_match_set:
+        if "sci" in a or "sci" in a["href"]:
+            urls.append(a["href"])
+    return urls
 
 
 async def get_direct_urls(
@@ -85,7 +61,7 @@ async def get_direct_urls(
     Finds the direct source url for a given identifier.
     """
     if base_urls is None:
-        base_urls = await SciHub.get_available_scihub_urls()
+        base_urls = await get_available_scihub_urls()
 
     async def get_wrapper(url):
         try:
