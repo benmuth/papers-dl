@@ -26,7 +26,7 @@ def match_available_providers(
     for provider in providers:
         for available_provider in available_providers:
             # a user-supplied provider might be a substring of a supported
-            # provider (sci-hub.ee instead of https://sci-hub.ee)
+            # provider (e.g. sci-hub.ee instead of https://sci-hub.ee)
             if provider in available_provider:
                 matching_providers.append(available_provider)
     return matching_providers
@@ -78,7 +78,7 @@ async def fetch(session, identifier, providers):
 
     urls = await get_urls(session, identifier, providers)
 
-    logging.info("urls: %s" % urls)
+    logging.info("PDF urls: %s" % "\n".join(urls))
     tasks = [get_wrapper(url) for url in urls if url]
     for item in zip(asyncio.as_completed(tasks), urls):
         res = await item[0]

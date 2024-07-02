@@ -81,7 +81,6 @@ def find_pdf_url(html_content) -> str | None:
     if script_element:
         match = re.search(r'PDFObject\.embed\("([^"]+)"', script_element.string)
         if match:
-            logging.info("found dynamically loaded PDF")
             return match.group(1)
 
     # look for the "<embed>" element (scihub)
@@ -92,7 +91,6 @@ def find_pdf_url(html_content) -> str | None:
         if isinstance(direct_url, list):
             direct_url = direct_url[0]
         if direct_url:
-            logging.info("found embedded PDF")
             return direct_url
 
     # look for an iframe
@@ -104,10 +102,8 @@ def find_pdf_url(html_content) -> str | None:
         if isinstance(direct_url, list):
             direct_url = direct_url[0]
         if direct_url:
-            logging.info("found iframe")
             return direct_url
 
-    logging.info("No direct link to PDF found")
     return None
 
 

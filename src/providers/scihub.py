@@ -60,8 +60,11 @@ async def get_direct_urls(
     """
     Finds the direct source url for a given identifier.
     """
+
     if base_urls is None:
         base_urls = await get_available_scihub_urls()
+
+    logging.info("searching Sci-Hub urls: %s" % base_urls)
 
     async def get_wrapper(url):
         try:
@@ -80,23 +83,25 @@ async def get_direct_urls(
         ]
 
     direct_urls = []
-    for task in tasks:
-        res = await task
-        if res is None:
-            continue
-        path = find_pdf_url(await res.text())
-        if isinstance(path, list):
-            path = path[0]
-        if isinstance(path, str) and path.startswith("//"):
-            direct_urls.append("https:" + path)
-        elif isinstance(path, str) and path.startswith("/"):
-            print("res url type", type(res.url))
-            direct_urls.append(urljoin(res.url.human_repr(), path))
+    try:
+        for task in tasks:
+            res = await task
+            if res is None:
+                continue
+            path = find_pdf_url(await res.text())
+            if isinstance(path, list):
+                path = path[0]
+            if isinstance(path, str) and path.startswith("//"):
+                direct_urls.append("https:" + path)
+            elif isinstance(path, str) and path.startswith("/"):
+                print("res url type", type(res.url))
+                direct_urls.append(urljoin(res.url.human_repr(), path))
+    except Exception as err:
+        logging.error("Error while looking for PDF urls: %s" % err)
 
-    if direct_urls:
-        logging.info(f"Found potential sources: {direct_urls}")
-    else:
-        logging.error("Found no potential sources")
+    if not direct_urls:
+        logging.info("No direct link to PDF found from Sci-Hub")
+
     return list(set(direct_urls))
 
 
