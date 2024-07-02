@@ -6,7 +6,7 @@ from parse.parse import find_pdf_url, parse_ids_from_text
 
 
 async def get_url(session, identifier):
-    base_url = "https://annas-archive.org/scidb/"
+    base_url = "https://annas-archive.gs/scidb/"
 
     is_doi = parse_ids_from_text(identifier, ["doi"])
     if is_doi:
