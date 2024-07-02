@@ -1,5 +1,6 @@
 import unittest
 import subprocess
+import sys
 
 test_paper_id = "10.1016/j.cub.2019.11.030"
 test_paper_title = "Parrots Voluntarily Help Each Other to Obtain Food Rewards"
@@ -9,7 +10,7 @@ class TestCLI(unittest.TestCase):
     def test_parse_command_doi_csv(self):
         result = subprocess.run(
             [
-                "python",
+                sys.executable,
                 "src/papers_dl.py",
                 "parse",
                 "-m",
@@ -24,10 +25,10 @@ class TestCLI(unittest.TestCase):
         )
         self.assertIn("10.1109/83.544569,doi", result.stdout)
 
-    def test_parse_command_isbn_jsonl(self):
+    def test_parse_command_doi_jsonl(self):
         result = subprocess.run(
             [
-                "python",
+                sys.executable,
                 "src/papers_dl.py",
                 "parse",
                 "-m",
