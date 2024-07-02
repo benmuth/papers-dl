@@ -47,7 +47,7 @@ async def fetch(args):
     return new_path
 
 
-async def main():
+async def run():
     name = "papers-dl"
     parser = argparse.ArgumentParser(
         prog=name,
@@ -156,5 +156,9 @@ async def main():
         parser.print_help()
 
 
+def main():
+    asyncio.run(run())
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(run())
