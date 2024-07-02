@@ -3,7 +3,7 @@ import unittest
 import aiohttp
 import asyncio
 
-from src.providers.scihub import SciHub
+from src.providers.scihub import get_available_scihub_urls
 
 
 class TestSciHub(unittest.IsolatedAsyncioTestCase):
@@ -11,5 +11,5 @@ class TestSciHub(unittest.IsolatedAsyncioTestCase):
         """
         Test to verify that `scihub.now.sh` is available
         """
-        urls = await SciHub.get_available_scihub_urls()
+        urls = await get_available_scihub_urls()
         self.assertIsNotNone(urls, "Failed to find Sci-Hub domains")

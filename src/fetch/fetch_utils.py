@@ -55,7 +55,7 @@ async def get_urls(session, identifier, providers):
     # user input, only search those
     if "scihub" not in providers:
         matching_scihub_urls = match_available_providers(
-            providers, await scihub.SciHub.get_available_scihub_urls()
+            providers, await scihub.get_available_scihub_urls()
         )
         logging.info(f"matching scihub urls: {matching_scihub_urls}")
         if len(matching_scihub_urls) > 0:
