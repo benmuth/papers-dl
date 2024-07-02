@@ -80,7 +80,6 @@ async def get_direct_urls(
         ]
 
     direct_urls = []
-    # for item in zip(base_urls, tasks):
     for task in tasks:
         res = await task
         if res is None:
@@ -94,10 +93,10 @@ async def get_direct_urls(
             print("res url type", type(res.url))
             direct_urls.append(urljoin(res.url.human_repr(), path))
 
-    if not direct_urls:
-        raise IdentifierNotFoundError
-
-    logging.info(f"Found potential sources: {direct_urls}")
+    if direct_urls:
+        logging.info(f"Found potential sources: {direct_urls}")
+    else:
+        logging.error("Found no potential sources")
     return list(set(direct_urls))
 
 
