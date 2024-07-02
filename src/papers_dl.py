@@ -12,11 +12,13 @@ supported_fetch_identifier_types = ["doi", "pmid", "url", "isbn"]
 
 
 def parse_ids(args) -> str:
-    # if a path isn't passed or is empty, read from stdin
-    if not (hasattr(args, "path") and args.path):
-        return format_output(parse_ids_from_text(sys.stdin.read(), args.query))
-
-    return format_output(parse_file(args.path, args.match), args.format)
+    output = None
+    if hasattr(args, "path") and args.path:
+        output = parse_file(args.path, args.match)
+    else:
+        # if a path isn't passed or is empty, read from stdin
+        output = parse_ids_from_text(sys.stdin.read(), args.match)
+    return format_output(output, args.format)
 
 
 async def fetch(args):

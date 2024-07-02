@@ -167,4 +167,6 @@ def format_output(output: list[dict[str, str]], format: str = "raw") -> str:
         lines = [json.dumps(line) for line in output]
     elif format == "csv":
         lines = [f"{line['id']},{line['type']}" for line in output]
+    else:
+        raise Exception(f"invalid format {format}")
     return "\n".join(lines)
