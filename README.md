@@ -4,13 +4,22 @@
 ## Usage
 ```shell
 # parse DOI identifiers from a file:
-papers-dl parse --match doi --path pages/my-paper.html
+papers-dl parse -m doi --path pages/my-paper.html
 
-# fetch paper with given identifier from all providers:
+# parse ISBN identifiers from a file, output matches as CSV:
+papers-dl parse -m isbn --path pages/my-paper.html -f csv
+
+# fetch paper with given identifier from any known provider:
 papers-dl fetch "10.1016/j.cub.2019.11.030"
 
-# fetch paper from any known Sci-Hub URL with verbose logging on, and store in "papers" directory
+# fetch paper from any known Sci-Hub URL with verbose logging on, and store in "papers" directory:
 papers-dl -v fetch -p "scihub" -o "papers" "10.1107/s0907444905036693"
+
+# fetch paper from specific Sci-Hub URL:
+papers-dl fetch -p "sci-hub.ee" "10.1107/s0907444905036693"
+
+# fetch paper from SciDB (Anna's Archive):
+papers-dl fetch -p "scidb" "10.1107/s0907444905036693"
 ```
 
 # About
