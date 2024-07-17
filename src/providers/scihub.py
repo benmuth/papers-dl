@@ -33,22 +33,30 @@ async def get_available_scihub_urls() -> list[str]:
     scihub_domain = re.compile(r"^http[s]*://sci.hub", flags=re.IGNORECASE)
     urls = []
 
-    async with aiohttp.request("GET", "https://sci-hub.now.sh/") as res:
-        s = BeautifulSoup(await res.text(), "html.parser")
+    try:
+        async with aiohttp.request("GET", "https://sci-hub.now.sh/") as res:
+            s = BeautifulSoup(await res.text(), "html.parser")
+    except Exception as e:
+        logging.error("Couldn't find Sci-Hub URLs: %s" % e)
+        return []
+
     text_matches = s.find_all(
         "a",
         href=True,
         string=re.compile(scihub_domain),
     )
+
     href_matches = s.find_all(
         "a",
         re.compile(scihub_domain),
         href=True,
     )
+
     full_match_set = set(text_matches) | set(href_matches)
     for a in full_match_set:
         if "sci" in a or "sci" in a["href"]:
             urls.append(a["href"])
+
     return urls
 
 
@@ -70,7 +78,7 @@ async def get_direct_urls(
         try:
             return await session.get(url)
         except Exception as e:
-            logging.error("error: %s" % e)
+            logging.error("Couldn't connect to %s: %s" % (url, e))
             return None
 
     if classify(identifier) == IDClass["URL-DIRECT"]:
@@ -94,8 +102,8 @@ async def get_direct_urls(
             if isinstance(path, str) and path.startswith("//"):
                 direct_urls.append("https:" + path)
             elif isinstance(path, str) and path.startswith("/"):
-                print("res url type", type(res.url))
                 direct_urls.append(urljoin(res.url.human_repr(), path))
+
     except Exception as err:
         logging.error("Error while looking for PDF urls: %s" % err)
 

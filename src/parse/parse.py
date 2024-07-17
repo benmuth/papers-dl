@@ -112,7 +112,7 @@ def parse_ids_from_text(
 ) -> list[dict[str, str]]:
     """
     Find all matches for the given id types in a string. If id_types isn't
-    given, defaults to the types in id_patterns.
+    given, it will parse all the types in id_patterns by default.
     """
 
     # we look for all ID patterns by default

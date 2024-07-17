@@ -6,13 +6,17 @@ from parse.parse import find_pdf_url, parse_ids_from_text
 
 
 async def get_url(session, identifier):
-    base_url = "https://annas-archive.gs/scidb/"
+    base_url = "https://annas-archive.org/scidb/"
 
     is_doi = parse_ids_from_text(identifier, ["doi"])
     if is_doi:
         url = urljoin(base_url, identifier)
         logging.info("searching SciDB: %s" % url)
-        res = await session.get(url)
+        try:
+            res = await session.get(url)
+        except Exception as e:
+            logging.error("Couldn't connect to SciDB: %s" % e)
+            return None
         pdf_url = find_pdf_url(await res.read())
         if pdf_url is None:
             logging.info("No direct link to PDF found from SciDB")
