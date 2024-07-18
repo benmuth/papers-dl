@@ -1,11 +1,11 @@
 import argparse
 import asyncio
-import logging
 import os
 import sys
 
 import aiohttp
 from fetch import fetch_utils
+from loguru import logger
 from parse.parse import format_output, id_patterns, parse_file, parse_ids_from_text
 
 supported_fetch_identifier_types = ["doi", "pmid", "url", "isbn"]
@@ -33,7 +33,7 @@ async def fetch(args):
         }
 
     async with aiohttp.ClientSession(headers=headers) as sess:
-        pdf_content = await fetch_utils.fetch(
+        pdf_content, url = await fetch_utils.fetch(
             sess,
             id,
             providers,
@@ -44,7 +44,7 @@ async def fetch(args):
     path = os.path.join(out, fetch_utils.generate_name(pdf_content))
     fetch_utils.save(pdf_content, path)
     new_path = fetch_utils.rename(out, path)
-    return new_path
+    return f"Successfully downloaded paper from {url}.\n Saved to {new_path}"
 
 
 async def run():
@@ -137,10 +137,12 @@ async def run():
 
     args = parser.parse_args()
 
+    # fmt = "{time} {level} {message}"
+    logger.remove(0)
     if args.verbose:
-        logging.basicConfig(level=logging.INFO)
+        logger.add(sys.stderr, level="INFO", enqueue=True, format="{message}")
     else:
-        logging.basicConfig(level=logging.ERROR)
+        logger.add(sys.stderr, level="ERROR", enqueue=True, format="{message}")
 
     if hasattr(args, "func"):
         if asyncio.iscoroutinefunction(args.func):

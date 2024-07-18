@@ -1,7 +1,6 @@
 import asyncio
 import hashlib
 import json
-import logging
 import os
 from typing import Iterable
 
@@ -9,6 +8,7 @@ import aiohttp
 import pdf2doi
 import providers.scidb as scidb
 import providers.scihub as scihub
+from loguru import logger
 
 all_providers = [
     "scihub",
@@ -40,10 +40,10 @@ async def get_urls(session, identifier, providers):
         return urls
 
     providers = [provider.strip() for provider in providers.split(",")]
-    logging.info(f"given providers: {providers}")
+    logger.info(f"given providers: {providers}")
 
     matching_providers = match_available_providers(providers)
-    logging.info(f"matching providers: {matching_providers}")
+    logger.info(f"matching providers: {matching_providers}")
     for mp in matching_providers:
         if mp == "scihub":
             urls.extend(await scihub.get_direct_urls(session, identifier))
@@ -57,7 +57,7 @@ async def get_urls(session, identifier, providers):
         matching_scihub_urls = match_available_providers(
             providers, await scihub.get_available_scihub_urls()
         )
-        logging.info(f"matching scihub urls: {matching_scihub_urls}")
+        logger.info(f"matching scihub urls: {matching_scihub_urls}")
         if len(matching_scihub_urls) > 0:
             urls.extend(
                 await scihub.get_direct_urls(
@@ -68,24 +68,24 @@ async def get_urls(session, identifier, providers):
     return urls
 
 
-async def fetch(session, identifier, providers):
+async def fetch(session, identifier, providers) -> tuple | None:
     async def get_wrapper(url):
         try:
             return await session.get(url)
         except Exception as e:
-            logging.error("error: %s" % e)
+            logger.error("error: {}", e)
             return None
 
     urls = await get_urls(session, identifier, providers)
 
-    logging.info("PDF urls: %s" % "\n".join(urls))
+    logger.info("PDF urls: {}", "\n".join(urls))
     tasks = [get_wrapper(url) for url in urls if url]
     for item in zip(asyncio.as_completed(tasks), urls):
         res = await item[0]
         if res is None or res.content_type != "application/pdf":
-            logging.info("couldn't find url at %s" % item[1])
+            logger.info("couldn't find url at {}", item[1])
             continue
-        return await res.read()
+        return (await res.read(), item[1])
     return None
 
 
@@ -94,12 +94,12 @@ def save(data, path):
     Save a file give data and a path.
     """
     try:
-        logging.info(f"Saving file to {path}")
+        logger.info(f"Saving file to {path}")
 
         with open(path, "wb") as f:
             f.write(data)
     except Exception as e:
-        logging.error(f"Failed to write to {path} {e}")
+        logger.error(f"Failed to write to {path} {e}")
         raise e
 
 
@@ -117,7 +117,7 @@ def rename(out_dir, path, name=None) -> str:
     successful, or the original path if not.
     """
 
-    logging.info("Finding paper title")
+    logger.info("Finding paper title")
     pdf2doi.config.set("verbose", False)
 
     try:
@@ -130,10 +130,10 @@ def rename(out_dir, path, name=None) -> str:
             name += ".pdf"
             new_path = os.path.join(out_dir, name)
             os.rename(path, new_path)
-            logging.info(f"File renamed to {new_path}")
+            logger.info(f"File renamed to {new_path}")
             return new_path
         else:
             return path
     except Exception as e:
-        logging.error(f"Couldn't get paper title from PDF at {path}: {e}")
+        logger.error(f"Couldn't get paper title from PDF at {path}: {e}")
         return path

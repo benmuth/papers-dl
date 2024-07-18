@@ -1,7 +1,8 @@
 import json
 import re
-import logging
+
 from bs4 import BeautifulSoup
+from loguru import logger
 
 
 # from https://isbn-checker.netlify.app
@@ -97,7 +98,7 @@ def find_pdf_url(html_content) -> str | None:
     iframe = s.find("iframe", {"type": "application/pdf"})
 
     if iframe:
-        logging.info(f"found iframe: {iframe}")
+        logger.info(f"found iframe: {iframe}")
         direct_url = iframe.get("src")
         if isinstance(direct_url, list):
             direct_url = direct_url[0]

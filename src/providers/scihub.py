@@ -1,11 +1,11 @@
 import asyncio
 import enum
-import logging
 import re
 from urllib.parse import urljoin
 
 import aiohttp
 from bs4 import BeautifulSoup
+from loguru import logger
 from parse.parse import find_pdf_url
 
 # URL-DIRECT - openly accessible paper
@@ -37,7 +37,7 @@ async def get_available_scihub_urls() -> list[str]:
         async with aiohttp.request("GET", "https://sci-hub.now.sh/") as res:
             s = BeautifulSoup(await res.text(), "html.parser")
     except Exception as e:
-        logging.error("Couldn't find Sci-Hub URLs: %s" % e)
+        logger.info("Couldn't find Sci-Hub URLs: {}", e)
         return []
 
     text_matches = s.find_all(
@@ -72,13 +72,13 @@ async def get_direct_urls(
     if base_urls is None:
         base_urls = await get_available_scihub_urls()
 
-    logging.info("searching Sci-Hub urls: %s" % base_urls)
+    logger.info("searching Sci-Hub urls: {}", base_urls)
 
     async def get_wrapper(url):
         try:
             return await session.get(url)
         except Exception as e:
-            logging.error("Couldn't connect to %s: %s" % (url, e))
+            logger.info("Couldn't connect to {}: {}", url, e)
             return None
 
     if classify(identifier) == IDClass["URL-DIRECT"]:
@@ -105,10 +105,10 @@ async def get_direct_urls(
                 direct_urls.append(urljoin(res.url.human_repr(), path))
 
     except Exception as err:
-        logging.error("Error while looking for PDF urls: %s" % err)
+        logger.error("Error while looking for PDF urls: {}", err)
 
     if not direct_urls:
-        logging.info("No direct link to PDF found from Sci-Hub")
+        logger.info("No direct link to PDF found from Sci-Hub")
 
     return list(set(direct_urls))
 
