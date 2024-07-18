@@ -1,7 +1,7 @@
-## Overview
+### Overview
 `papers-dl` is a command line application for downloading scientific papers.
 
-## Usage
+### Usage
 ```shell
 # parse DOI identifiers from a file:
 papers-dl parse -m doi --path pages/my-paper.html
@@ -22,7 +22,7 @@ papers-dl fetch -p "sci-hub.ee" "10.1107/s0907444905036693"
 papers-dl fetch -p "scidb" "10.1107/s0907444905036693"
 ```
 
-# About
+### About
 
 `papers-dl` attempts to be a comprehensive tool for gathering research papers from popular open libraries. There are other solutions for this (see "Other tools" below), but `papers-dl` is trying to fill its own niche:
 
@@ -35,7 +35,7 @@ That said, `papers-dl` may not be the best choice for your specific use case rig
 
 This project started as a fork of [scihub.py](https://github.com/zaytoun/scihub.py).
 
-# Other tools
+### Other tools
 
 - [Scidownl](https://pypi.org/project/scidownl/)
 - [arxiv-dl](https://pypi.org/project/arxiv-dl/)
@@ -43,7 +43,7 @@ This project started as a fork of [scihub.py](https://github.com/zaytoun/scihub.
 
 # Roadmap
 
-`papers-dl`'s API is not yet stable.
+`papers-dl`'s CLI is not yet stable.
 
 Short-term roadmap:
 
@@ -55,5 +55,5 @@ Short-term roadmap:
 - add support for downloading formats other than PDFs, like HTML or epub
 
 **searching**
-- search libraries for papers and metadata
+- add a CLI command for searching libraries for papers and metadata
 
