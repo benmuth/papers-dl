@@ -77,6 +77,7 @@ async def get_direct_urls(
     async def get_wrapper(url):
         try:
             return await session.get(url)
+        # errors shouldn't cancel the whole task group, so we just catch them
         except Exception as e:
             logger.info("Couldn't connect to {}: {}", url, e)
             return None
