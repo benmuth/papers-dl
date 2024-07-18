@@ -33,14 +33,17 @@ async def fetch(args):
         }
 
     async with aiohttp.ClientSession(headers=headers) as sess:
-        pdf_content, url = await fetch_utils.fetch(
+        result = await fetch_utils.fetch(
             sess,
             id,
             providers,
         )
 
-    if pdf_content is None:
+    if result is None:
         return None
+
+    pdf_content, url = result
+
     path = os.path.join(out, fetch_utils.generate_name(pdf_content))
     fetch_utils.save(pdf_content, path)
     new_path = fetch_utils.rename(out, path)

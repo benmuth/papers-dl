@@ -78,7 +78,10 @@ async def fetch(session, identifier, providers) -> tuple | None:
 
     urls = await get_urls(session, identifier, providers)
 
-    logger.info("PDF urls: {}", "\n".join(urls))
+    urls = [url for url in urls if url is not None]
+
+    if len(urls) > 0:
+        logger.info("PDF urls: {}", "\n".join(urls))
     tasks = [get_wrapper(url) for url in urls if url]
     for item in zip(asyncio.as_completed(tasks), urls):
         res = await item[0]
