@@ -62,6 +62,13 @@ id_patterns = {
         r"10.1021\/\w\w\d++",
         r"10.1207/[\w\d]+\&\d+_\d+",
     ],
+    # arXiv ids: https://info.arxiv.org/help/arxiv_identifier.html
+    "arxiv": [
+        # identifiers since March 2007
+        r"arXiv:\d{4}\.\d{4,5}(v\d+)?",
+        # identifiers before March 2007
+        r"arXiv:[A-Za-z-]{3,10}(\.[A-Z]{2})?\/\d{4,8}",
+    ],
 }
 
 # these can eliminate false positives
@@ -123,13 +130,14 @@ def parse_ids_from_text(
     seen = set()
     matches = []
     for id_type in id_types:
+        validator = id_validators.get(id_type)
         for regex in id_patterns[id_type]:
-            validator = id_validators.get(id_type)
-            for match in re.findall(regex, s, re.IGNORECASE):
-                valid_id = validator(match) if validator else True
-                if match not in seen and valid_id:
-                    matches.append({"id": match, "type": id_type})
-                seen.add(match)
+            for match in re.finditer(regex, s, re.IGNORECASE):
+                mg = match.group()
+                valid_id = validator(mg) if validator else True
+                if mg not in seen and valid_id:
+                    matches.append({"id": mg, "type": id_type})
+                seen.add(mg)
     return matches
 
 

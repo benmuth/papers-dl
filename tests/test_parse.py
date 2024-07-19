@@ -3,7 +3,7 @@ import unittest
 
 from parse import parse
 
-target_ids = ("doi", "pmid", "isbn", "issn", "url")
+target_ids = ("doi", "pmid", "isbn", "issn", "url", "arxiv")
 
 
 class TestParser(unittest.TestCase):
@@ -57,28 +57,73 @@ class TestParser(unittest.TestCase):
 
 test_document_ids = {
     "ids.txt": {
-        "url": ["https://www.cell.com/current-biology/fulltext/S0960-9822(19)31469-1"],
-        "doi": ["10.1016/j.cub.2019.11.030", "10.1107/s0907444905036693"],
+        "url": [
+            "https://www.cell.com/current-biology/fulltext/S0960-9822(19)31469-1",
+        ],
+        "doi": [
+            "10.1016/j.cub.2019.11.030",
+            "10.1107/s0907444905036693",
+        ],
     },
     "bsp-tree.html": {
-        "doi": ["10.1109/83.544569"],
-        "issn": ["1057-7149", "1941-0042"],
+        "doi": [
+            "10.1109/83.544569",
+        ],
+        "issn": [
+            "1057-7149",
+            "1941-0042",
+        ],
     },
     "reyes-rendering.html": {
-        "doi": ["10.1145/37402.37414"],
+        "doi": [
+            "10.1145/37402.37414",
+        ],
     },
     "superscalar-cisc.html": {
-        "doi": ["10.1109/HPCA.2006.1598111"],
-        "issn": ["1530-0897", "2378-203X"],
+        "doi": [
+            "10.1109/HPCA.2006.1598111",
+        ],
+        "issn": [
+            "1530-0897",
+            "2378-203X",
+        ],
     },
     "b-tree-techniques.html": {
-        "doi": ["10.1561/1900000028"],
-        "url": ["http://dx.doi.org/10.1561/1900000028"],
-        "isbn": ["978-1-60198-482-1", "978-1-60198-483-8"],
+        "doi": [
+            "10.1561/1900000028",
+        ],
+        "url": [
+            "http://dx.doi.org/10.1561/1900000028",
+        ],
+        "isbn": [
+            "978-1-60198-482-1",
+            "978-1-60198-483-8",
+        ],
     },
     "real-time-rendering.html": {
-        "url": ["https://doi.org/10.1201/9781315365459"],
-        "isbn": ["9781315365459"],
+        "url": [
+            "https://doi.org/10.1201/9781315365459",
+        ],
+        "isbn": [
+            "9781315365459",
+        ],
+    },
+    "arxiv.html": {
+        "url": [
+            "https://arxiv.org/abs/1605.04938",
+        ],
+        "arxiv": [
+            # identifiers after March 2007
+            "arXiv:2407.13619",
+            "arXiv:1608.00878",
+            "arXiv:1605.04938",
+            # identifiers before March 2007
+            "arXiv:q-bio/0512009",
+            "arXiv:math/0601009",
+            "arXiv:hep-th/0512302",
+            "arXiv:cond-mat/0512295",
+            "arXiv:quant-ph/0511150",
+        ],
     },
 }
 
