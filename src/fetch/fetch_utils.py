@@ -8,12 +8,10 @@ import aiohttp
 import pdf2doi
 import providers.scidb as scidb
 import providers.scihub as scihub
+import providers.arxiv as arxiv
 from loguru import logger
 
-all_providers = [
-    "scihub",
-    "scidb",
-]
+all_providers = ["scihub", "scidb", "arxiv"]
 
 
 def match_available_providers(
@@ -37,6 +35,7 @@ async def get_urls(session, identifier, providers):
     if providers == "all":
         urls.append(await scidb.get_url(session, identifier))
         urls.extend(await scihub.get_direct_urls(session, identifier))
+        urls.append(await arxiv.get_url(identifier))
         return urls
 
     providers = [provider.strip() for provider in providers.split(",")]
@@ -49,10 +48,12 @@ async def get_urls(session, identifier, providers):
             urls.extend(await scihub.get_direct_urls(session, identifier))
         if mp == "scidb":
             urls.append(await scidb.get_url(session, identifier))
+        if mp == "arxiv":
+            urls.append(await arxiv.get_url(identifier))
 
     # if the catch-all "scihub" provider isn't given, we look for
     # specific Sci-Hub urls. if we find specific Sci-Hub URLs in the
-    # user input, only search those
+    # user input, we only use those
     if "scihub" not in providers:
         matching_scihub_urls = match_available_providers(
             providers, await scihub.get_available_scihub_urls()
@@ -126,7 +127,13 @@ def rename(out_dir, path, name=None) -> str:
     try:
         if name is None:
             result_info = pdf2doi.pdf2doi(path)
-            validation_info = json.loads(result_info["validation_info"])
+            if not result_info:
+                return path
+            raw_validation_info = result_info["validation_info"]
+            if isinstance(raw_validation_info, (str, bytes, bytearray)):
+                validation_info = json.loads(raw_validation_info)
+            else:
+                validation_info = raw_validation_info
             name = validation_info.get("title")
 
         if name:

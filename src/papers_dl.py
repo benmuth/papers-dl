@@ -8,8 +8,6 @@ from fetch import fetch_utils
 from loguru import logger
 from parse.parse import format_output, id_patterns, parse_file, parse_ids_from_text
 
-supported_fetch_identifier_types = ["doi", "pmid", "url", "isbn"]
-
 
 def parse_ids(args) -> str:
     output = None

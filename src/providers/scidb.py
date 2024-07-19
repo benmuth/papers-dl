@@ -23,12 +23,3 @@ async def get_url(session, identifier):
         return pdf_url
 
     return None
-
-
-doi_regexes = [
-    r"10.\d{4,9}\/[-._;()\/:A-Z0-9]+",
-    r"10.1002\/[^\s]+",
-    r"10.\d{4}\/\d+-\d+X?(\d+)\d+<[\d\w]+:[\d\w]*>\d+.\d+.\w+;\d",
-    r"10.1021\/\w\w\d++",
-    r"10.1207/[\w\d]+\&\d+_\d+",
-]
