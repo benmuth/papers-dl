@@ -48,10 +48,9 @@ This project started as a fork of [scihub.py](https://github.com/zaytoun/scihub.
 Short-term roadmap:
 
 **parsing**
-- add support for parsing more identifier types, like PMID, ISSN, and arXiv identifiers
+- add support for parsing more identifier types like PMID and ISSN
 
 **fetching**
-- add arXiv as a provider
 - add support for downloading formats other than PDFs, like HTML or epub
 
 **searching**
