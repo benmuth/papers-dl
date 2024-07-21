@@ -70,6 +70,7 @@ async def get_urls(session, identifier, providers):
 
 
 async def fetch(session, identifier, providers) -> tuple | None:
+    # catch exceptions so that they don't cancel the task group
     async def get_wrapper(url):
         try:
             return await session.get(url)

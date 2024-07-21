@@ -4,22 +4,12 @@ import os
 import sys
 
 import aiohttp
-from fetch import fetch_utils
 from loguru import logger
+from fetch import fetch
 from parse.parse import format_output, id_patterns, parse_file, parse_ids_from_text
 
 
-def parse_ids(args) -> str:
-    output = None
-    if hasattr(args, "path") and args.path:
-        output = parse_file(args.path, args.match)
-    else:
-        # if a path isn't passed or is empty, read from stdin
-        output = parse_ids_from_text(sys.stdin.read(), args.match)
-    return format_output(output, args.format)
-
-
-async def fetch(args):
+async def fetch_paper(args) -> str:
     providers = args.providers
     id = args.query
     out = args.output
@@ -31,21 +21,27 @@ async def fetch(args):
         }
 
     async with aiohttp.ClientSession(headers=headers) as sess:
-        result = await fetch_utils.fetch(
-            sess,
-            id,
-            providers,
-        )
+        result = await fetch.fetch(sess, id, providers)
 
     if result is None:
         return None
 
     pdf_content, url = result
 
-    path = os.path.join(out, fetch_utils.generate_name(pdf_content))
-    fetch_utils.save(pdf_content, path)
-    new_path = fetch_utils.rename(out, path)
+    path = os.path.join(out, fetch.generate_name(pdf_content))
+    fetch.save(pdf_content, path)
+    new_path = fetch.rename(out, path)
     return f"Successfully downloaded paper from {url}.\n Saved to {new_path}"
+
+
+def parse_ids(args) -> str:
+    output = None
+    if hasattr(args, "path") and args.path:
+        output = parse_file(args.path, args.match)
+    else:
+        # if a path isn't passed or is empty, read from stdin
+        output = parse_ids_from_text(sys.stdin.read(), args.match)
+    return format_output(output, args.format)
 
 
 async def run():
@@ -133,12 +129,11 @@ async def run():
         nargs="?",
     )
 
-    parser_fetch.set_defaults(func=fetch)
+    parser_fetch.set_defaults(func=fetch_paper)
     parser_parse.set_defaults(func=parse_ids)
 
     args = parser.parse_args()
 
-    # fmt = "{time} {level} {message}"
     logger.remove(0)
     if args.verbose:
         logger.add(sys.stderr, level="INFO", enqueue=True, format="{message}")
@@ -154,6 +149,7 @@ async def run():
         if result:
             print(result)
         else:
+            # TODO: change this to be more general
             print("No papers found")
     else:
         parser.print_help()
