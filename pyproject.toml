@@ -28,6 +28,7 @@ dependencies = [
   "feedparser==6.0.11",
   "google==3.0.0",
   "idna==3.6",
+  "loguru==0.7.2",
   "pdf2doi==1.5.1",
   "pdfminer.six==20221105",
   "pdftitle==0.11",
