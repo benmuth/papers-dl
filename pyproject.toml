@@ -17,7 +17,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-  "aiohttp==3.9.5",
+  "aiohttp==3.10.11",
   "bs4==0.0.2",
   "loguru==0.7.3",
   "pdf2doi==1.7",
