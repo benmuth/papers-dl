@@ -21,7 +21,7 @@ dependencies = [
   "beautifulsoup4==4.12.3",
   "bs4==0.0.2",
   "certifi==2024.2.2",
-  "cffi==1.16.0",
+  "cffi>=1.16.0",
   "charset-normalizer==3.3.2",
   "cryptography==42.0.5",
   "easygui==0.98.3",
