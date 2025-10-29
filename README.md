@@ -1,6 +1,15 @@
 ### Overview
 `papers-dl` is a command line application for downloading scientific papers.
 
+### Installation
+```shell
+# install with uv
+uv tool install papers-dl
+
+# install with pip
+pip install papers-dl
+```
+
 ### Usage
 ```shell
 # parse DOI identifiers from a file:
