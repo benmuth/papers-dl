@@ -1,7 +1,6 @@
 import asyncio
 import enum
-import re
-from urllib.parse import urljoin
+from urllib.parse import quote, urljoin, urlsplit
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -12,7 +11,7 @@ from parse.parse import find_pdf_url
 # URL-NON-DIRECT - pay-walled paper
 # PMID - PubMed ID
 # DOI - digital object identifier
-IDClass = enum.Enum("identifier", ["URL-DIRECT", "URL-NON-DIRECT", "PMD", "DOI"])
+IDClass = enum.Enum("identifier", ["URL-DIRECT", "URL-NON-DIRECT", "PMID", "DOI"])
 
 DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15"
 
@@ -22,42 +21,48 @@ class IdentifierNotFoundError(Exception):
 
 
 async def get_available_scihub_urls() -> list[str]:
-    """
-    Finds available Sci-Hub urls via https://sci-hub.now.sh/
-    """
-
-    # NOTE: This misses some valid URLs. Alternatively, we could parse
-    # the HTML more finely by navigating the parsed DOM, instead of relying
-    # on filtering. That might be more brittle in case the HTML changes.
-    # Generally, we don't need to get all URLs.
-    scihub_domain = re.compile(r"^http[s]*://sci.hub", flags=re.IGNORECASE)
+    """Discover mirrors from the directory's links or its current redirects."""
+    directory_hosts = {"sci-hub.now.sh", "sci-hub.vercel.app"}
     urls = []
-
+    url = "https://sci-hub.now.sh/"
     try:
-        async with aiohttp.request("GET", "https://sci-hub.now.sh/") as res:
-            s = BeautifulSoup(await res.text(), "html.parser")
-    except Exception as e:
-        logger.info("Couldn't find Sci-Hub URLs: {}", e)
-        return []
-
-    text_matches = s.find_all(
-        "a",
-        href=True,
-        string=re.compile(scihub_domain),
-    )
-
-    href_matches = s.find_all(
-        "a",
-        re.compile(scihub_domain),
-        href=True,
-    )
-
-    full_match_set = set(text_matches) | set(href_matches)
-    for a in full_match_set:
-        if "sci" in a or "sci" in a["href"]:
-            urls.append(a["href"])
-
-    return urls
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=30)
+        ) as session:
+            visited = set()
+            while url not in visited and len(visited) < 10:
+                visited.add(url)
+                host = urlsplit(url).hostname or ""
+                if (
+                    host.startswith(("sci-hub.", "scihub."))
+                    and host not in directory_hosts
+                ):
+                    # Retain the advertised mirror even if it is unreachable:
+                    # discovery and successful paper retrieval are distinct.
+                    urls.append(url)
+                async with session.get(url, allow_redirects=False) as response:
+                    if response.status in (301, 302, 303, 307, 308):
+                        url = urljoin(url, response.headers["Location"])
+                        if urlsplit(url).scheme not in ("http", "https"):
+                            break
+                        continue
+                    response.raise_for_status()
+                    page = BeautifulSoup(await response.text(), "html.parser")
+                    for link in page.find_all("a", href=True):
+                        candidate = urljoin(url, link["href"])
+                        parsed = urlsplit(candidate)
+                        if (
+                            parsed.scheme in ("http", "https")
+                            and (parsed.hostname or "").startswith(
+                                ("sci-hub.", "scihub.")
+                            )
+                            and parsed.hostname not in directory_hosts
+                        ):
+                            urls.append(candidate)
+                    break
+    except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, KeyError) as error:
+        logger.info("Couldn't read Sci-Hub directory: {}", error)
+    return list(dict.fromkeys(urls))
 
 
 async def get_direct_urls(
@@ -69,49 +74,36 @@ async def get_direct_urls(
     Finds the direct source url for a given identifier.
     """
 
-    if base_urls is None:
-        base_urls = await get_available_scihub_urls()
-
-    logger.info("searching Sci-Hub urls: {}", base_urls)
-
-    # catch exceptions so that they don't cancel the task group
-    async def get_wrapper(url):
-        try:
-            return await session.get(url)
-        except Exception as e:
-            logger.info("Couldn't connect to {}: {}", url, e)
-            return None
-
     if classify(identifier) == IDClass["URL-DIRECT"]:
         return [identifier]
+    if base_urls is None:
+        base_urls = await get_available_scihub_urls()
+    logger.info("searching Sci-Hub urls: {}", base_urls)
 
-    async with asyncio.TaskGroup() as tg:
-        tasks = [
-            tg.create_task(get_wrapper(urljoin(base_url, identifier)))
-            for base_url in base_urls
-        ]
+    async def get_wrapper(base_url):
+        # A publisher URL is a lookup value, never a replacement for the mirror.
+        url = base_url.rstrip("/") + "/" + quote(identifier, safe="/")
+        try:
+            async with session.get(
+                url, timeout=aiohttp.ClientTimeout(total=30)
+            ) as response:
+                response.raise_for_status()
+                content = await response.read()
+                if content.startswith(b"%PDF-"):
+                    return str(response.url)
+                path = find_pdf_url(content)
+                if isinstance(path, list):
+                    path = path[0] if path else None
+                if isinstance(path, str):
+                    direct_url = urljoin(str(response.url), path)
+                    if urlsplit(direct_url).scheme in ("http", "https"):
+                        return direct_url
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as error:
+            logger.info("Couldn't read Sci-Hub mirror {}: {}", base_url, error)
+        return None
 
-    direct_urls = []
-    try:
-        for task in tasks:
-            res = await task
-            if res is None:
-                continue
-            path = find_pdf_url(await res.text())
-            if isinstance(path, list):
-                path = path[0]
-            if isinstance(path, str) and path.startswith("//"):
-                direct_urls.append("https:" + path)
-            elif isinstance(path, str) and path.startswith("/"):
-                direct_urls.append(urljoin(res.url.human_repr(), path))
-
-    except Exception as err:
-        logger.error("Error while looking for PDF urls: {}", err)
-
-    if not direct_urls:
-        logger.info("No direct link to PDF found from Sci-Hub")
-
-    return list(set(direct_urls))
+    urls = await asyncio.gather(*(get_wrapper(url) for url in base_urls))
+    return list(dict.fromkeys(url for url in urls if url))
 
 
 def classify(identifier) -> IDClass:

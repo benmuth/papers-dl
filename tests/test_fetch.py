@@ -12,4 +12,6 @@ class TestSciHub(unittest.IsolatedAsyncioTestCase):
         Test to verify that `scihub.now.sh` is available
         """
         urls = await get_available_scihub_urls()
-        self.assertIsNotNone(urls, "Failed to find Sci-Hub domains")
+        self.assertTrue(
+            urls, "Failed to discover the mirror advertised by sci-hub.now.sh"
+        )

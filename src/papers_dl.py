@@ -30,7 +30,7 @@ async def fetch_paper(args) -> str:
 
     path = os.path.join(out, fetch.generate_name(pdf_content))
     fetch.save(pdf_content, path)
-    new_path = fetch.rename(out, path)
+    new_path = fetch.rename(out, path, identifier=id)
     return f"Successfully downloaded paper from {url}.\n Saved to {new_path}"
 
 

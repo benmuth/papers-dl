@@ -1,3 +1,4 @@
+import json
 import unittest
 import subprocess
 import sys
@@ -7,6 +8,48 @@ test_paper_title = "Parrots Voluntarily Help Each Other to Obtain Food Rewards"
 
 
 class TestCLI(unittest.TestCase):
+    def test_parse_requires_literal_doi_period(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                "src/papers_dl.py",
+                "parse",
+                "-m",
+                "doi",
+                "-m",
+                "arxiv",
+                "-f",
+                "jsonl",
+            ],
+            input="\n".join(
+                [
+                    "https://web.archive.org/web/20100105152318/http://www.networkcomputing.com/1119/1119f1products_5.html",
+                    "https://web.archive.org/web/20110810152257/http://www.cisco.com/en/us/products/hw/modules/ps2706/ps4452/index.html",
+                    "10x1002/not-a-doi 10x1021/ab123 10x1207/example&1_2",
+                    "10.1016/j.cell.2024.11.027 10.1002/example 10.1021/ab123 10.1207/s123456789",
+                    "arXiv:1406.5197",
+                ]
+            ),
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        records = [
+            json.loads(line)
+            for line in result.stdout.splitlines()
+            if line.startswith("{")
+        ]
+        self.assertEqual(
+            {record["id"] for record in records},
+            {
+                "10.1016/j.cell.2024.11.027",
+                "10.1002/example",
+                "10.1021/ab123",
+                "10.1207/s123456789",
+                "arXiv:1406.5197",
+            },
+        )
+
     def test_parse_command_doi_csv(self):
         result = subprocess.run(
             [

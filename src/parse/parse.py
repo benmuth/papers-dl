@@ -56,11 +56,11 @@ id_patterns = {
     # doi regexes taken from https://www.crossref.org/blog/dois-and-matching-regular-expressions/
     # listed in decreasing order of goodness. Not fully tested yet.
     "doi": [
-        r"10.\d{4,9}\/[-._;()\/:A-Z0-9]+",
-        r"10.1002\/[^\s]+",
-        r"10.\d{4}\/\d+-\d+X?(\d+)\d+<[\d\w]+:[\d\w]*>\d+.\d+.\w+;\d",
-        r"10.1021\/\w\w\d++",
-        r"10.1207/[\w\d]+\&\d+_\d+",
+        r"10\.\d{4,9}\/[-._;()\/:A-Z0-9]+",
+        r"10\.1002\/[^\s]+",
+        r"10\.\d{4}\/\d+-\d+X?(\d+)\d+<[\d\w]+:[\d\w]*>\d+.\d+.\w+;\d",
+        r"10\.1021\/\w\w\d++",
+        r"10\.1207/[\w\d]+\&\d+_\d+",
     ],
     # arXiv ids: https://info.arxiv.org/help/arxiv_identifier.html
     "arxiv": [
